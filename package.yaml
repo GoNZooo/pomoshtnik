@@ -1,0 +1,65 @@
+name:                discord-sandbox
+version:             0.1.0.0
+github:              githubuser/discord-sandbox
+license:             BSD3
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2021 Author name here
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/githubuser/discord-sandbox#readme>
+
+dependencies:
+- base >= 4.11 && < 10
+- rio >= 0.1.12.0
+- discord-haskell
+- emoji
+- uuid
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wpartial-fields
+- -Wredundant-constraints
+
+library:
+  source-dirs: src
+
+executables:
+  discord-sandbox-exe:
+    main:                Main.hs
+    source-dirs:         app
+    dependencies:
+    - discord-sandbox
+    - optparse-simple
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+
+tests:
+  discord-sandbox-test:
+    main:                Spec.hs
+    source-dirs:         test
+    dependencies:
+    - discord-sandbox
+    - hspec
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N

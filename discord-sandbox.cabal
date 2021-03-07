@@ -1,0 +1,81 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: ae481627d2d87c0e6b407c634c32a335cedf262664fc778fdf0f9e2fbe97a8f6
+
+name:           discord-sandbox
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/githubuser/discord-sandbox#readme>
+homepage:       https://github.com/githubuser/discord-sandbox#readme
+bug-reports:    https://github.com/githubuser/discord-sandbox/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2021 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/discord-sandbox
+
+library
+  exposed-modules:
+      Import
+      Run
+      Types
+      Util
+  other-modules:
+      Paths_discord_sandbox
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.11 && <10
+    , discord-haskell
+    , emoji
+    , rio >=0.1.12.0
+    , uuid
+  default-language: Haskell2010
+
+executable discord-sandbox-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_discord_sandbox
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.11 && <10
+    , discord-haskell
+    , discord-sandbox
+    , emoji
+    , optparse-simple
+    , rio >=0.1.12.0
+    , uuid
+  default-language: Haskell2010
+
+test-suite discord-sandbox-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      UtilSpec
+      Paths_discord_sandbox
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.11 && <10
+    , discord-haskell
+    , discord-sandbox
+    , emoji
+    , hspec
+    , rio >=0.1.12.0
+    , uuid
+  default-language: Haskell2010
