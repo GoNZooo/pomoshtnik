@@ -73,25 +73,25 @@ decodeCommand Message {messageText = text, messageAuthor = author, messageChanne
 
 handleCommand :: Command -> LogFunc -> TVar BotState -> DiscordHandler ()
 handleCommand (GenerateToken _channelId user) logFunction botState = do
-  newToken <- liftIO UUID.nextRandom
-  state@BotState {activeTokens = tokens} <- readTVarIO botState
-  let newTokens = Map.insert user newToken tokens
-  atomically $ writeTVar botState (state {activeTokens = newTokens})
+  let addNewToken = do
+        newToken <- liftIO UUID.nextRandom
+        atomically $ do
+          state@BotState {activeTokens = tokens} <- readTVar botState
+          let newTokens = Map.insert user newToken tokens
+          writeTVar botState (state {activeTokens = newTokens})
+        pure newToken
+
+  newToken <- addNewToken
   runRIO logFunction $ do
     discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> Discord.userName user <> "'"
-  pure ()
 handleCommand (Login channelId user suppliedToken) _ botState = do
+  let hasUserToken tokens = Just suppliedToken == Map.lookup user tokens
+
   state@BotState {activeTokens = tokens, authenticated = authenticatedUsers} <- readTVarIO botState
-  let userToken = Map.lookup user tokens
-  case userToken of
-    Just token
-      | token == suppliedToken -> do
-        let newState = state {authenticated = Set.insert user authenticatedUsers}
-        void $ atomically $ swapTVar botState newState
-        replyTo channelId user (Just "You have been authenticated.") Nothing
-      | otherwise ->
-        pure ()
-    Nothing -> pure ()
+  when (hasUserToken tokens) $ do
+    let newState = state {authenticated = Set.insert user authenticatedUsers}
+    void $ atomically $ swapTVar botState newState
+    replyTo channelId user (Just "You have been authenticated.") Nothing
 handleCommand (AuthenticatedUsers channelId user) _ botState = do
   BotState {authenticated = authenticatedUsers} <- readTVarIO botState
   withAuthenticatedUser authenticatedUsers user $ do
