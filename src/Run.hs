@@ -10,6 +10,7 @@ import qualified Data.UUID.V4 as UUID
 import Discord (DiscordHandler, RunDiscordOpts (..))
 import qualified Discord
 import Discord.Requests (ChannelRequest (..))
+import Discord.Types (Event (..), Message (..))
 import qualified Discord.Types as Discord
 import Import
 import qualified RIO.Map as Map
@@ -18,15 +19,14 @@ import qualified RIO.Text as Text
 import qualified System.Environment as Environment
 
 data BotState = BotState
-  { messageCount :: Int,
-    authenticated :: Set Discord.User,
+  { authenticated :: Set Discord.User,
     activeTokens :: Map Discord.User UUID
   }
 
 run :: RIO App ()
 run = do
   token <- liftIO $ Environment.getEnv "DISCORD_API_TOKEN" >>= \t -> pure $ "Bot " <> Text.pack t
-  botState <- liftIO $ newTVarIO BotState {messageCount = 0, authenticated = Set.empty, activeTokens = Map.empty}
+  botState <- liftIO $ newTVarIO BotState {authenticated = Set.empty, activeTokens = Map.empty}
   logFunction <- asks appLogFunc
 
   runDiscordResult <-
@@ -40,42 +40,33 @@ run = do
   logError $ display runDiscordResult
 
 eventHandler :: LogFunc -> TVar BotState -> Discord.Event -> DiscordHandler ()
-eventHandler logFunction botState (Discord.MessageCreate message)
+eventHandler logFunction botState (MessageCreate message)
   | Discord.userIsBot (Discord.messageAuthor message) = pure ()
   | otherwise = handleMessage logFunction botState message
 eventHandler _ _ _ = pure ()
 
-handleMessage :: LogFunc -> TVar BotState -> Discord.Message -> DiscordHandler ()
+handleMessage :: LogFunc -> TVar BotState -> Message -> DiscordHandler ()
 handleMessage logFunction botState message = do
-  let messageText = Discord.messageText message
-  case decodeCommand (Discord.messageChannel message) (Discord.messageAuthor message) messageText of
+  case decodeCommand message of
     Just command ->
       handleCommand command logFunction botState
     Nothing ->
       pure ()
-  newMessageCount <- liftIO $ do
-    atomically $ do
-      state@BotState {messageCount = count} <- readTVar botState
-      let newCount = count + 1
-      void $ swapTVar botState $ state {messageCount = newCount}
-      pure newCount
-  runRIO logFunction $ do
-    discordLog $ "Message received (" <> textDisplay newMessageCount <> "): " <> messageText
 
 data Command
   = Login Discord.ChannelId Discord.User UUID
   | GenerateToken Discord.ChannelId Discord.User
   | AuthenticatedUsers Discord.ChannelId Discord.User
 
-decodeCommand :: Discord.ChannelId -> Discord.User -> Text -> Maybe Command
-decodeCommand channelId user text
-  | text == "!generate-token" = Just $ GenerateToken channelId user
-  | text == "!authenticated" = Just $ AuthenticatedUsers channelId user
+decodeCommand :: Discord.Message -> Maybe Command
+decodeCommand Message {messageText = text, messageAuthor = author, messageChannel = channelId}
+  | text == "!generate-token" = Just $ GenerateToken channelId author
+  | text == "!authenticated" = Just $ AuthenticatedUsers channelId author
   | "!login " `Text.isPrefixOf` text =
     case Text.split (== ' ') text of
       _ : token : _ ->
         case UUID.fromText token of
-          Just uuid -> Just $ Login channelId user uuid
+          Just uuid -> Just $ Login channelId author uuid
           Nothing -> Nothing
       _ -> Nothing
   | otherwise = Nothing
@@ -128,11 +119,11 @@ instance DiscordMention Discord.User where
 
 replyTo :: Discord.ChannelId -> Discord.User -> Maybe Text -> Maybe Discord.CreateEmbed -> DiscordHandler ()
 replyTo channelId user text Nothing =
-  let messageText = mconcat [mention user, maybe "" (" " <>) text]
-   in void $ Discord.restCall $ CreateMessage channelId messageText
+  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessage channelId messageText'
 replyTo channelId user text (Just embed) =
-  let messageText = mconcat [mention user, maybe "" (" " <>) text]
-   in void $ Discord.restCall $ CreateMessageEmbed channelId messageText embed
+  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessageEmbed channelId messageText' embed
 
 withAuthenticatedUser :: Set.Set Discord.User -> Discord.User -> DiscordHandler () -> DiscordHandler ()
 withAuthenticatedUser users user action
