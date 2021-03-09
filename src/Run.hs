@@ -10,7 +10,6 @@ import qualified Data.UUID.V4 as UUID
 import Discord (DiscordHandler, RunDiscordOpts (..))
 import qualified Discord
 import Discord.Requests (ChannelRequest (..))
-import qualified Discord.Requests as DiscordRequests
 import qualified Discord.Types as Discord
 import Import
 import qualified RIO.Map as Map
@@ -121,14 +120,19 @@ handleCommand (AuthenticatedUsers channelId user) _ botState = do
             }
     replyTo channelId user Nothing (Just messageEmbed)
 
+class DiscordMention a where
+  mention :: a -> Text
+
+instance DiscordMention Discord.User where
+  mention Discord.User {Discord.userId = userId} = "<@" <> tshow userId <> ">"
+
 replyTo :: Discord.ChannelId -> Discord.User -> Maybe Text -> Maybe Discord.CreateEmbed -> DiscordHandler ()
 replyTo channelId user text Nothing =
-  void $ Discord.restCall $ CreateMessage channelId (replyName user <> maybe "" (" " <>) text)
+  let messageText = mconcat [mention user, maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessage channelId messageText
 replyTo channelId user text (Just embed) =
-  void $ Discord.restCall $ CreateMessageEmbed channelId (replyName user <> maybe "" (" " <>) text) embed
-
-replyName :: Discord.User -> Text
-replyName Discord.User {Discord.userId = userId} = "<@" <> tshow userId <> ">"
+  let messageText = mconcat [mention user, maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessageEmbed channelId messageText embed
 
 withAuthenticatedUser :: Set.Set Discord.User -> Discord.User -> DiscordHandler () -> DiscordHandler ()
 withAuthenticatedUser users user action
