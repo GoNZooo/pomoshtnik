@@ -7,10 +7,11 @@ module Run (run) where
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
-import Discord (RunDiscordOpts (..))
+import Discord (DiscordHandler, RunDiscordOpts (..))
 import qualified Discord
-import qualified Discord.Types as Discord
+import Discord.Requests (ChannelRequest (..))
 import qualified Discord.Requests as DiscordRequests
+import qualified Discord.Types as Discord
 import Import
 import qualified RIO.Map as Map
 import qualified RIO.Set as Set
@@ -39,13 +40,13 @@ run = do
           }
   logError $ display runDiscordResult
 
-eventHandler :: LogFunc -> TVar BotState -> Discord.Event -> Discord.DiscordHandler ()
+eventHandler :: LogFunc -> TVar BotState -> Discord.Event -> DiscordHandler ()
 eventHandler logFunction botState (Discord.MessageCreate message)
   | Discord.userIsBot (Discord.messageAuthor message) = pure ()
   | otherwise = handleMessage logFunction botState message
 eventHandler _ _ _ = pure ()
 
-handleMessage :: LogFunc -> TVar BotState -> Discord.Message -> Discord.DiscordHandler ()
+handleMessage :: LogFunc -> TVar BotState -> Discord.Message -> DiscordHandler ()
 handleMessage logFunction botState message = do
   let messageText = Discord.messageText message
   case decodeCommand (Discord.messageChannel message) (Discord.messageAuthor message) messageText of
@@ -80,7 +81,7 @@ decodeCommand channelId user text
       _ -> Nothing
   | otherwise = Nothing
 
-handleCommand :: Command -> LogFunc -> TVar BotState -> Discord.DiscordHandler ()
+handleCommand :: Command -> LogFunc -> TVar BotState -> DiscordHandler ()
 handleCommand (GenerateToken _channelId user) logFunction botState = do
   newToken <- liftIO UUID.nextRandom
   state@BotState {activeTokens = tokens} <- readTVarIO botState
@@ -97,17 +98,44 @@ handleCommand (Login channelId user suppliedToken) _ botState = do
       | token == suppliedToken -> do
         let newState = state {authenticated = Set.insert user authenticatedUsers}
         void $ atomically $ swapTVar botState newState
-        void $ Discord.restCall $ DiscordRequests.CreateMessage channelId "You have been authenticated."
+        replyTo channelId user (Just "You have been authenticated.") Nothing
       | otherwise ->
         pure ()
     Nothing -> pure ()
 handleCommand (AuthenticatedUsers channelId user) _ botState = do
-  BotState{authenticated = authenticatedUsers} <- readTVarIO botState
-  if user `Set.notMember` authenticatedUsers then pure () else do
-    let usersString = Text.intercalate "\n" (Set.elems $ Set.map Discord.userName authenticatedUsers)
-    void $ Discord.restCall $ DiscordRequests.CreateMessage channelId usersString
+  BotState {authenticated = authenticatedUsers} <- readTVarIO botState
+  withAuthenticatedUser authenticatedUsers user $ do
+    let usersString =
+          Text.intercalate
+            "\n"
+            (Set.elems $ Set.map (\u -> "- " <> Discord.userName u <> "#" <> Discord.userDiscrim u) authenticatedUsers)
+        messageEmbed =
+          Discord.def
+            { Discord.createEmbedFields =
+                [ Discord.EmbedField
+                    { Discord.embedFieldName = "Authenticated Users",
+                      Discord.embedFieldValue = usersString,
+                      Discord.embedFieldInline = Nothing
+                    }
+                ]
+            }
+    replyTo channelId user Nothing (Just messageEmbed)
 
-onStart :: LogFunc -> Discord.DiscordHandler ()
+replyTo :: Discord.ChannelId -> Discord.User -> Maybe Text -> Maybe Discord.CreateEmbed -> DiscordHandler ()
+replyTo channelId user text Nothing =
+  void $ Discord.restCall $ CreateMessage channelId (replyName user <> maybe "" (" " <>) text)
+replyTo channelId user text (Just embed) =
+  void $ Discord.restCall $ CreateMessageEmbed channelId (replyName user <> maybe "" (" " <>) text) embed
+
+replyName :: Discord.User -> Text
+replyName Discord.User {Discord.userId = userId} = "<@" <> tshow userId <> ">"
+
+withAuthenticatedUser :: Set.Set Discord.User -> Discord.User -> DiscordHandler () -> DiscordHandler ()
+withAuthenticatedUser users user action
+  | user `Set.member` users = action
+  | otherwise = pure ()
+
+onStart :: LogFunc -> DiscordHandler ()
 onStart logFunc = do
   runRIO logFunc $ do
     discordLog "Started reading messages"
