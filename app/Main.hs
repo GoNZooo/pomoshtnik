@@ -28,7 +28,6 @@ main = do
   lo <- logOptionsHandle stderr (optionsVerbose options)
   pc <- mkDefaultProcessContext
   commands <- newTQueueIO
-  outgoingEvents <- newTQueueIO
   botState <- Discord.initialBotState
   discordHandleReference <- newIORef undefined
 
@@ -39,7 +38,6 @@ main = do
               appProcessContext = pc,
               appOptions = options,
               appCommands = commands,
-              appOutgoingDiscordEvents = outgoingEvents,
               appBotState = botState,
               appDiscordHandle = discordHandleReference
             }

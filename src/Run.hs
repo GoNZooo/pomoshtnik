@@ -5,11 +5,17 @@
 module Run (run) where
 
 import Control.Concurrent (forkIO)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUID
+import Data.UUID (UUID)
 import Discord (RunDiscordOpts (..))
 import qualified Discord
-import DiscordSandbox.Discord (eventHandler, handleCommand, onStart)
+import Discord.Types (CreateEmbed (..), EmbedField (..), Message (..), User(..))
+import DiscordSandbox.Discord (eventHandler, onStart, replyTo)
 import Import
 import qualified RIO.Text as Text
+import qualified RIO.Set as Set
+import qualified RIO.Map as Map
 import qualified System.Environment as Environment
 
 run :: RIO App ()
@@ -31,7 +37,89 @@ run = do
       Discord.runDiscord
         Discord.def
           { discordToken = token,
-            discordOnStart = onStart handleReference logFunction,
-            discordOnEvent = eventHandler commandQueue
+            discordOnStart = onStart handleReference logFunction (discordLog "Started reading messages"),
+            discordOnEvent = eventHandler decodeCommand commandQueue
           }
   logError $ display runDiscordResult
+
+decodeCommand :: Message -> Maybe Command
+decodeCommand Message {messageText = text, messageAuthor = author, messageChannel = channelId}
+  | text == "!generate-token" = Just $ GenerateToken channelId author
+  | text == "!authenticated" = Just $ AuthenticatedUsers channelId author
+  | "!login " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : token : _ ->
+        case UUID.fromText token of
+          Just uuid -> Just $ Login channelId author uuid
+          Nothing -> Nothing
+      _ -> Nothing
+  | otherwise = Nothing
+
+handleCommand ::
+  ( MonadReader env m,
+    MonadIO m,
+    HasLogFunc env,
+    HasActiveTokens env,
+    HasAuthenticatedUsers env,
+    HasDiscordHandle env
+  ) =>
+  Command ->
+  m ()
+handleCommand (GenerateToken _channelId user) = do
+  newToken <- addNewToken user
+  discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user <> "'"
+handleCommand (Login channelId user suppliedToken) = do
+  authenticationSuccessful <- authenticateUser user suppliedToken
+  when authenticationSuccessful $ do
+    replyTo channelId user (Just "You have been authenticated.") Nothing
+handleCommand (AuthenticatedUsers channelId user) = do
+  usersReference <- view authenticatedUsersL
+  whenM (userIsAuthenticated user) $ do
+    authenticatedUsers <- readTVarIO usersReference
+    let usersString =
+          Text.intercalate
+            "\n"
+            (Set.elems $ Set.map (\u -> "- " <> userName u <> "#" <> userDiscrim u) authenticatedUsers)
+        messageEmbed =
+          Discord.def
+            { createEmbedFields =
+                [ EmbedField
+                    { embedFieldName = "Authenticated Users",
+                      embedFieldValue = usersString,
+                      embedFieldInline = Nothing
+                    }
+                ]
+            }
+    replyTo channelId user Nothing (Just messageEmbed)
+
+addNewToken :: (MonadReader env m, HasActiveTokens env, MonadIO m) => User -> m UUID
+addNewToken user = do
+  tokensReference <- view activeTokensL
+  newToken <- liftIO UUID.nextRandom
+  atomically $ modifyTVar' tokensReference (Map.insert user newToken)
+  pure newToken
+
+authenticateUser ::
+  (MonadReader env m, HasActiveTokens env, HasAuthenticatedUsers env, MonadIO m) =>
+  User ->
+  UUID ->
+  m Bool
+authenticateUser user token = do
+  tokensReference <- view activeTokensL
+  usersReference <- view authenticatedUsersL
+  atomically $ do
+    tokens <- readTVar tokensReference
+    if Just token /= Map.lookup user tokens
+      then pure False
+      else do
+        modifyTVar usersReference $ Set.insert user
+        pure True
+
+userIsAuthenticated :: (MonadReader env m, MonadIO m, HasAuthenticatedUsers env) => User -> m Bool
+userIsAuthenticated user = do
+  usersReference <- view authenticatedUsersL
+  users <- readTVarIO usersReference
+  pure $ user `Set.member` users
+
+discordLog :: (MonadIO m, MonadReader env m, HasLogFunc env) => Text -> m ()
+discordLog message = logInfoS "Discord" $ display message
