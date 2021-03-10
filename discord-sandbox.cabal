@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ae481627d2d87c0e6b407c634c32a335cedf262664fc778fdf0f9e2fbe97a8f6
+-- hash: d97d223ceb1dbc7cb8c10307cd1ce38a83fbb04464ba8d776a2b5b5d52e0c399
 
 name:           discord-sandbox
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      DiscordSandbox.Discord
       Import
       Run
       Types

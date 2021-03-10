@@ -1,48 +1,43 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module DiscordSandbox.Discord where
+module DiscordSandbox.Discord
+  ( initialBotState,
+    eventHandler,
+    onStart,
+    handleCommand,
+  )
+where
 
+import Control.Concurrent (forkIO)
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
 import Discord (DiscordHandler)
 import qualified Discord
 import Discord.Requests (ChannelRequest (..))
-import Discord.Types (Event (..), Message (..))
+import Discord.Types
+  ( ChannelId,
+    CreateEmbed (..),
+    EmbedField (..),
+    Event (..),
+    Message (..),
+    User (..),
+    createEmbedFields,
+  )
 import qualified Discord.Types as Discord
 import Import
 import qualified RIO.Map as Map
 import qualified RIO.Set as Set
 import qualified RIO.Text as Text
 
-initialState :: BotState
-initialState = BotState {authenticated = Set.empty, activeTokens = Map.empty}
+initialBotState :: (MonadIO m) => m BotState
+initialBotState = do
+  authenticatedReference <- newTVarIO Set.empty
+  tokensReference <- newTVarIO Map.empty
+  pure $ BotState {authenticated = authenticatedReference, activeTokens = tokensReference}
 
-data BotState = BotState
-  { authenticated :: Set Discord.User,
-    activeTokens :: Map Discord.User UUID
-  }
-
-eventHandler :: LogFunc -> TVar BotState -> Discord.Event -> DiscordHandler ()
-eventHandler logFunction botState (MessageCreate message)
-  | Discord.userIsBot (Discord.messageAuthor message) = pure ()
-  | otherwise = handleMessage logFunction botState message
-eventHandler _ _ _ = pure ()
-
-handleMessage :: LogFunc -> TVar BotState -> Message -> DiscordHandler ()
-handleMessage logFunction botState message = do
-  case decodeCommand message of
-    Just command ->
-      handleCommand command logFunction botState
-    Nothing ->
-      pure ()
-
-data Command
-  = Login Discord.ChannelId Discord.User UUID
-  | GenerateToken Discord.ChannelId Discord.User
-  | AuthenticatedUsers Discord.ChannelId Discord.User
-
-decodeCommand :: Discord.Message -> Maybe Command
+decodeCommand :: Message -> Maybe Command
 decodeCommand Message {messageText = text, messageAuthor = author, messageChannel = channelId}
   | text == "!generate-token" = Just $ GenerateToken channelId author
   | text == "!authenticated" = Just $ AuthenticatedUsers channelId author
@@ -55,41 +50,81 @@ decodeCommand Message {messageText = text, messageAuthor = author, messageChanne
       _ -> Nothing
   | otherwise = Nothing
 
-handleCommand :: Command -> LogFunc -> TVar BotState -> DiscordHandler ()
-handleCommand (GenerateToken _channelId user) logFunction botState = do
-  let addNewToken = do
-        newToken <- liftIO UUID.nextRandom
-        atomically $ do
-          state@BotState {activeTokens = tokens} <- readTVar botState
-          let newTokens = Map.insert user newToken tokens
-          writeTVar botState (state {activeTokens = newTokens})
-        pure newToken
+replyTo ::
+  (MonadReader env m, HasDiscordOutbox env, MonadIO m) =>
+  ChannelId ->
+  User ->
+  Maybe Text ->
+  Maybe CreateEmbed ->
+  m ()
+replyTo channelId user maybeText maybeEmbed = addOutgoingEvent $ ReplyToUser channelId user maybeText maybeEmbed
 
-  newToken <- addNewToken
-  runRIO logFunction $ do
-    discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> Discord.userName user <> "'"
-handleCommand (Login channelId user suppliedToken) _ botState = do
-  let hasUserToken tokens = Just suppliedToken == Map.lookup user tokens
+addOutgoingEvent :: (MonadReader env m, MonadIO m, HasDiscordOutbox env) => OutgoingDiscordEvent -> m ()
+addOutgoingEvent event = do
+  outbox <- view discordOutboxL
+  atomically $ writeTQueue outbox event
 
-  state@BotState {activeTokens = tokens, authenticated = authenticatedUsers} <- readTVarIO botState
-  when (hasUserToken tokens) $ do
-    let newState = state {authenticated = Set.insert user authenticatedUsers}
-    void $ atomically $ swapTVar botState newState
+addNewToken :: (MonadReader env m, HasActiveTokens env, MonadIO m) => User -> m UUID
+addNewToken user = do
+  tokensReference <- view activeTokensL
+  newToken <- liftIO UUID.nextRandom
+  atomically $ modifyTVar' tokensReference (Map.insert user newToken)
+  pure newToken
+
+authenticateUser ::
+  (MonadReader env m, HasActiveTokens env, HasAuthenticatedUsers env, MonadIO m) =>
+  User ->
+  UUID ->
+  m Bool
+authenticateUser user token = do
+  tokensReference <- view activeTokensL
+  usersReference <- view authenticatedUsersL
+  atomically $ do
+    tokens <- readTVar tokensReference
+    if Just token /= Map.lookup user tokens
+      then pure False
+      else do
+        modifyTVar usersReference $ Set.insert user
+        pure True
+
+userIsAuthenticated :: (MonadReader env m, MonadIO m, HasAuthenticatedUsers env) => User -> m Bool
+userIsAuthenticated user = do
+  usersReference <- view authenticatedUsersL
+  users <- readTVarIO usersReference
+  pure $ user `Set.member` users
+
+handleCommand ::
+  ( MonadReader env m,
+    MonadIO m,
+    HasLogFunc env,
+    HasActiveTokens env,
+    HasAuthenticatedUsers env,
+    HasDiscordOutbox env
+  ) =>
+  Command ->
+  m ()
+handleCommand (GenerateToken _channelId user) = do
+  newToken <- addNewToken user
+  discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user <> "'"
+handleCommand (Login channelId user suppliedToken) = do
+  authenticationSuccessful <- authenticateUser user suppliedToken
+  when authenticationSuccessful $ do
     replyTo channelId user (Just "You have been authenticated.") Nothing
-handleCommand (AuthenticatedUsers channelId user) _ botState = do
-  BotState {authenticated = authenticatedUsers} <- readTVarIO botState
-  withAuthenticatedUser authenticatedUsers user $ do
+handleCommand (AuthenticatedUsers channelId user) = do
+  usersReference <- view authenticatedUsersL
+  whenM (userIsAuthenticated user) $ do
+    authenticatedUsers <- readTVarIO usersReference
     let usersString =
           Text.intercalate
             "\n"
-            (Set.elems $ Set.map (\u -> "- " <> Discord.userName u <> "#" <> Discord.userDiscrim u) authenticatedUsers)
+            (Set.elems $ Set.map (\u -> "- " <> userName u <> "#" <> userDiscrim u) authenticatedUsers)
         messageEmbed =
           Discord.def
-            { Discord.createEmbedFields =
-                [ Discord.EmbedField
-                    { Discord.embedFieldName = "Authenticated Users",
-                      Discord.embedFieldValue = usersString,
-                      Discord.embedFieldInline = Nothing
+            { createEmbedFields =
+                [ EmbedField
+                    { embedFieldName = "Authenticated Users",
+                      embedFieldValue = usersString,
+                      embedFieldInline = Nothing
                     }
                 ]
             }
@@ -98,26 +133,55 @@ handleCommand (AuthenticatedUsers channelId user) _ botState = do
 class DiscordMention a where
   mention :: a -> Text
 
-instance DiscordMention Discord.User where
-  mention Discord.User {Discord.userId = userId} = "<@" <> tshow userId <> ">"
+instance DiscordMention User where
+  mention User {userId = userId'} = "<@" <> tshow userId' <> ">"
 
-replyTo :: Discord.ChannelId -> Discord.User -> Maybe Text -> Maybe Discord.CreateEmbed -> DiscordHandler ()
-replyTo channelId user text Nothing =
-  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
-   in void $ Discord.restCall $ CreateMessage channelId messageText'
-replyTo channelId user text (Just embed) =
-  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
-   in void $ Discord.restCall $ CreateMessageEmbed channelId messageText' embed
-
-withAuthenticatedUser :: Set.Set Discord.User -> Discord.User -> DiscordHandler () -> DiscordHandler ()
-withAuthenticatedUser users user action
-  | user `Set.member` users = action
-  | otherwise = pure ()
-
-onStart :: LogFunc -> DiscordHandler ()
-onStart logFunc = do
+onStart :: LogFunc -> TQueue OutgoingDiscordEvent -> DiscordHandler ()
+onStart logFunc inbox = do
+  discordHandle <- ask
+  void $
+    liftIO $
+      forkIO $
+        forever $ do
+          maybeOutgoingEvent <- atomically $ tryReadTQueue inbox
+          case maybeOutgoingEvent of
+            Just event -> runReaderT (handleOutgoingEvent event) discordHandle
+            Nothing -> pure ()
   runRIO logFunc $ do
     discordLog "Started reading messages"
 
+handleOutgoingEvent :: OutgoingDiscordEvent -> DiscordHandler ()
+handleOutgoingEvent (SendDiscordMessage _channelId Nothing Nothing) = pure ()
+handleOutgoingEvent (SendDiscordMessage channelId (Just text) Nothing) =
+  void $ Discord.restCall $ CreateMessage channelId text
+handleOutgoingEvent (SendDiscordMessage channelId Nothing (Just embed)) =
+  void $ Discord.restCall $ CreateMessageEmbed channelId "" embed
+handleOutgoingEvent (SendDiscordMessage channelId (Just text) (Just embed)) =
+  void $ Discord.restCall $ CreateMessageEmbed channelId text embed
+handleOutgoingEvent (ReplyToUser channelId user maybeText maybeEmbed) =
+  replyTo' channelId user maybeText maybeEmbed
+
 discordLog :: (MonadIO m, MonadReader env m, HasLogFunc env) => Text -> m ()
 discordLog message = logInfoS "Discord" $ display message
+
+eventHandler :: TQueue Command -> Event -> DiscordHandler ()
+eventHandler commandQueue (MessageCreate message)
+  | Discord.userIsBot (messageAuthor message) = pure ()
+  | otherwise = handleMessage commandQueue message
+eventHandler _ _ = pure ()
+
+handleMessage :: TQueue Command -> Message -> DiscordHandler ()
+handleMessage commandQueue message = do
+  case decodeCommand message of
+    Just command -> do
+      liftIO $ atomically $ writeTQueue commandQueue command
+    Nothing ->
+      pure ()
+
+replyTo' :: ChannelId -> User -> Maybe Text -> Maybe CreateEmbed -> DiscordHandler ()
+replyTo' channelId user text Nothing =
+  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessage channelId messageText'
+replyTo' channelId user text (Just embed) =
+  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessageEmbed channelId messageText' embed
