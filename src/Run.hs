@@ -37,7 +37,7 @@ run = do
       Discord.runDiscord
         Discord.def
           { discordToken = token,
-            discordOnStart = onStart handleReference logFunction (discordLog "Started reading messages"),
+            discordOnStart = onStart handleReference (runRIO logFunction $ discordLog "Started reading messages"),
             discordOnEvent = eventHandler decodeCommand commandQueue
           }
   logError $ display runDiscordResult

@@ -52,11 +52,11 @@ class DiscordMention a where
 instance DiscordMention User where
   mention User {userId = userId'} = "<@" <> tshow userId' <> ">"
 
-onStart :: IORef DiscordHandle -> LogFunc -> ReaderT LogFunc IO () -> DiscordHandler ()
-onStart handleReference logFunc onStartAction = do
+onStart :: IORef DiscordHandle -> IO () -> DiscordHandler ()
+onStart handleReference onStartAction = do
   discordHandle <- ask
   writeIORef handleReference discordHandle
-  void $ liftIO $ runReaderT onStartAction logFunc
+  liftIO onStartAction
 
 eventHandler :: (Message -> Maybe command) -> TQueue command -> Event -> DiscordHandler ()
 eventHandler commandDecoder commandQueue (MessageCreate message)
