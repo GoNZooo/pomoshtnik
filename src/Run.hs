@@ -17,7 +17,7 @@ run = do
   token <- liftIO $ Environment.getEnv "DISCORD_API_TOKEN" >>= \t -> pure $ "Bot " <> Text.pack t
   logFunction <- asks appLogFunc
   commandQueue <- asks appCommands
-  outgoingDiscordEvents <- asks appOutgoingDiscordEvents
+  handleReference <- asks appDiscordHandle
   appState <- ask
 
   _ <- liftIO $
@@ -31,7 +31,7 @@ run = do
       Discord.runDiscord
         Discord.def
           { discordToken = token,
-            discordOnStart = onStart logFunction outgoingDiscordEvents,
+            discordOnStart = onStart handleReference logFunction,
             discordOnEvent = eventHandler commandQueue
           }
   logError $ display runDiscordResult

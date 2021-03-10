@@ -30,6 +30,8 @@ main = do
   commands <- newTQueueIO
   outgoingEvents <- newTQueueIO
   botState <- Discord.initialBotState
+  discordHandleReference <- newIORef undefined
+
   withLogFunc lo $ \lf ->
     let app =
           App
@@ -38,6 +40,7 @@ main = do
               appOptions = options,
               appCommands = commands,
               appOutgoingDiscordEvents = outgoingEvents,
-              appBotState = botState
+              appBotState = botState,
+              appDiscordHandle = discordHandleReference
             }
      in runRIO app run

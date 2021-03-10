@@ -9,11 +9,10 @@ module DiscordSandbox.Discord
   )
 where
 
-import Control.Concurrent (forkIO)
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
-import Discord (DiscordHandler)
+import Discord (DiscordHandle, DiscordHandler)
 import qualified Discord
 import Discord.Requests (ChannelRequest (..))
 import Discord.Types
@@ -51,18 +50,20 @@ decodeCommand Message {messageText = text, messageAuthor = author, messageChanne
   | otherwise = Nothing
 
 replyTo ::
-  (MonadReader env m, HasDiscordOutbox env, MonadIO m) =>
+  (MonadReader env m, HasDiscordHandle env, MonadIO m) =>
   ChannelId ->
   User ->
   Maybe Text ->
   Maybe CreateEmbed ->
   m ()
-replyTo channelId user maybeText maybeEmbed = addOutgoingEvent $ ReplyToUser channelId user maybeText maybeEmbed
+replyTo channelId user maybeText maybeEmbed = do
+  runDiscordAction $ replyTo' channelId user maybeText maybeEmbed
 
-addOutgoingEvent :: (MonadReader env m, MonadIO m, HasDiscordOutbox env) => OutgoingDiscordEvent -> m ()
-addOutgoingEvent event = do
-  outbox <- view discordOutboxL
-  atomically $ writeTQueue outbox event
+runDiscordAction :: (MonadReader env m, MonadIO m, HasDiscordHandle env) => DiscordHandler a -> m a
+runDiscordAction action = do
+  discordHandleReference <- view discordHandleL
+  discordHandle <- readIORef discordHandleReference
+  liftIO $ runReaderT action discordHandle
 
 addNewToken :: (MonadReader env m, HasActiveTokens env, MonadIO m) => User -> m UUID
 addNewToken user = do
@@ -99,7 +100,7 @@ handleCommand ::
     HasLogFunc env,
     HasActiveTokens env,
     HasAuthenticatedUsers env,
-    HasDiscordOutbox env
+    HasDiscordHandle env
   ) =>
   Command ->
   m ()
@@ -136,30 +137,12 @@ class DiscordMention a where
 instance DiscordMention User where
   mention User {userId = userId'} = "<@" <> tshow userId' <> ">"
 
-onStart :: LogFunc -> TQueue OutgoingDiscordEvent -> DiscordHandler ()
-onStart logFunc inbox = do
+onStart :: IORef DiscordHandle -> LogFunc -> DiscordHandler ()
+onStart handleReference logFunc = do
   discordHandle <- ask
-  void $
-    liftIO $
-      forkIO $
-        forever $ do
-          maybeOutgoingEvent <- atomically $ tryReadTQueue inbox
-          case maybeOutgoingEvent of
-            Just event -> runReaderT (handleOutgoingEvent event) discordHandle
-            Nothing -> pure ()
+  writeIORef handleReference discordHandle
   runRIO logFunc $ do
     discordLog "Started reading messages"
-
-handleOutgoingEvent :: OutgoingDiscordEvent -> DiscordHandler ()
-handleOutgoingEvent (SendDiscordMessage _channelId Nothing Nothing) = pure ()
-handleOutgoingEvent (SendDiscordMessage channelId (Just text) Nothing) =
-  void $ Discord.restCall $ CreateMessage channelId text
-handleOutgoingEvent (SendDiscordMessage channelId Nothing (Just embed)) =
-  void $ Discord.restCall $ CreateMessageEmbed channelId "" embed
-handleOutgoingEvent (SendDiscordMessage channelId (Just text) (Just embed)) =
-  void $ Discord.restCall $ CreateMessageEmbed channelId text embed
-handleOutgoingEvent (ReplyToUser channelId user maybeText maybeEmbed) =
-  replyTo' channelId user maybeText maybeEmbed
 
 discordLog :: (MonadIO m, MonadReader env m, HasLogFunc env) => Text -> m ()
 discordLog message = logInfoS "Discord" $ display message

@@ -3,6 +3,7 @@
 module Types where
 
 import Data.UUID (UUID)
+import Discord (DiscordHandle)
 import Discord.Types (ChannelId, CreateEmbed, User)
 import RIO
 import RIO.Process
@@ -17,8 +18,8 @@ data App = App
     appProcessContext :: !ProcessContext,
     appOptions :: !Options,
     appCommands :: TQueue Command,
-    appOutgoingDiscordEvents :: TQueue OutgoingDiscordEvent,
-    appBotState :: BotState
+    appBotState :: BotState,
+    appDiscordHandle :: IORef DiscordHandle
   }
 
 instance HasLogFunc App where
@@ -32,12 +33,6 @@ class HasDiscordInbox env where
 
 instance HasDiscordInbox App where
   discordInboxL = lens appCommands (\x y -> x {appCommands = y})
-
-class HasDiscordOutbox env where
-  discordOutboxL :: Lens' env (TQueue OutgoingDiscordEvent)
-
-instance HasDiscordOutbox App where
-  discordOutboxL = lens appOutgoingDiscordEvents (\x y -> x {appOutgoingDiscordEvents = y})
 
 class HasBotState env where
   botStateL :: Lens' env BotState
@@ -62,6 +57,12 @@ instance HasActiveTokens App where
     lens
       (activeTokens . appBotState)
       (\app@App {appBotState = botState} y -> app {appBotState = botState {activeTokens = y}})
+
+class HasDiscordHandle env where
+  discordHandleL :: Lens' env (IORef DiscordHandle)
+
+instance HasDiscordHandle App where
+  discordHandleL = lens appDiscordHandle (\x y -> x {appDiscordHandle = y})
 
 data BotState = BotState
   { authenticated :: TVar (Set User),
