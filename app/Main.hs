@@ -29,7 +29,8 @@ main = do
   pc <- mkDefaultProcessContext
   commands <- newTQueueIO
   botState <- Discord.initialBotState
-  discordHandleReference <- newIORef undefined
+  -- This will be filled in later in `onStart`, 
+  discordHandle <- newIORef $ error "`discordHandle` reference hasn't been filled in"
 
   withLogFunc lo $ \lf ->
     let app =
@@ -39,6 +40,6 @@ main = do
               appOptions = options,
               appCommands = commands,
               appBotState = botState,
-              appDiscordHandle = discordHandleReference
+              appDiscordHandle = discordHandle
             }
      in runRIO app run
