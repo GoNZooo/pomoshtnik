@@ -3,7 +3,6 @@
 
 module Main (main) where
 
-import qualified DiscordSandbox.Discord as Discord
 import Import
 import Options.Applicative.Simple
 import qualified Paths_discord_sandbox
@@ -27,9 +26,9 @@ main = do
       empty
   lo <- logOptionsHandle stderr (optionsVerbose options)
   pc <- mkDefaultProcessContext
-  commands <- newTQueueIO
-  botState <- Discord.initialBotState
-  -- This will be filled in later in `onStart`, 
+  events <- newTQueueIO
+  botState <- initialBotState
+  -- This will be filled in later in `onStart`,
   discordHandle <- newIORef $ error "`discordHandle` reference hasn't been filled in"
 
   withLogFunc lo $ \lf ->
@@ -38,8 +37,14 @@ main = do
             { appLogFunc = lf,
               appProcessContext = pc,
               appOptions = options,
-              appCommands = commands,
+              appDiscordEvents = events,
               appBotState = botState,
               appDiscordHandle = discordHandle
             }
      in runRIO app run
+
+initialBotState :: (MonadIO m) => m BotState
+initialBotState = do
+  authenticatedReference <- newTVarIO mempty
+  tokensReference <- newTVarIO mempty
+  pure $ BotState {authenticated = authenticatedReference, activeTokens = tokensReference}

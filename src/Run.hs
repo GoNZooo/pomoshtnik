@@ -5,17 +5,17 @@
 module Run (run) where
 
 import Control.Concurrent (forkIO)
+import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
-import Data.UUID (UUID)
 import Discord (RunDiscordOpts (..))
 import qualified Discord
 import Discord.Types (CreateEmbed (..), EmbedField (..), Event (..), Message (..), User (..))
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
 import Import
-import qualified RIO.Text as Text
-import qualified RIO.Set as Set
 import qualified RIO.Map as Map
+import qualified RIO.Set as Set
+import qualified RIO.Text as Text
 import qualified System.Environment as Environment
 
 run :: RIO App ()
