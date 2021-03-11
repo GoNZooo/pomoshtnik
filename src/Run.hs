@@ -70,8 +70,7 @@ handleCommand (GenerateToken _channelId user) = do
   newToken <- addNewToken user
   discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user <> "'"
 handleCommand (Login channelId user suppliedToken) = do
-  authenticationSuccessful <- authenticateUser user suppliedToken
-  when authenticationSuccessful $ do
+  whenM (authenticateUser user suppliedToken) $ do
     replyTo channelId user (Just "You have been authenticated.") Nothing
 handleCommand (AuthenticatedUsers channelId user) = do
   usersReference <- view authenticatedUsersL
@@ -93,7 +92,7 @@ handleCommand (AuthenticatedUsers channelId user) = do
             }
     replyTo channelId user Nothing (Just messageEmbed)
 
-addNewToken :: (MonadReader env m, HasActiveTokens env, MonadIO m) => User -> m UUID
+addNewToken :: (MonadReader env m, MonadIO m, HasActiveTokens env) => User -> m UUID
 addNewToken user = do
   tokensReference <- view activeTokensL
   newToken <- liftIO UUID.nextRandom
@@ -101,7 +100,7 @@ addNewToken user = do
   pure newToken
 
 authenticateUser ::
-  (MonadReader env m, HasActiveTokens env, HasAuthenticatedUsers env, MonadIO m) =>
+  (MonadReader env m, MonadIO m, HasActiveTokens env, HasAuthenticatedUsers env) =>
   User ->
   UUID ->
   m Bool
