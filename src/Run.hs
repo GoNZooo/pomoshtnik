@@ -10,8 +10,8 @@ import qualified Data.UUID.V4 as UUID
 import Data.UUID (UUID)
 import Discord (RunDiscordOpts (..))
 import qualified Discord
-import Discord.Types (CreateEmbed (..), EmbedField (..), Message (..), User(..))
-import DiscordSandbox.Discord (eventHandler, onStart, replyTo)
+import Discord.Types (CreateEmbed (..), EmbedField (..), Event (..), Message (..), User (..))
+import DiscordSandbox.Discord (onEvent, onStart, replyTo)
 import Import
 import qualified RIO.Text as Text
 import qualified RIO.Set as Set
@@ -22,15 +22,15 @@ run :: RIO App ()
 run = do
   token <- liftIO $ Environment.getEnv "DISCORD_API_TOKEN" >>= \t -> pure $ "Bot " <> Text.pack t
   logFunction <- asks appLogFunc
-  commandQueue <- asks appCommands
+  eventQueue <- asks appDiscordEvents
   handleReference <- asks appDiscordHandle
   appState <- ask
 
   _ <- liftIO $
     forkIO $
       forever $ do
-        command <- atomically $ readTQueue commandQueue
-        runRIO appState $ handleCommand command
+        event <- atomically $ decodeCommand <$> readTQueue eventQueue
+        runRIO appState $ maybe mempty handleCommand event
 
   runDiscordResult <-
     liftIO $
@@ -38,12 +38,12 @@ run = do
         Discord.def
           { discordToken = token,
             discordOnStart = onStart handleReference (runRIO logFunction $ discordLog "Started reading messages"),
-            discordOnEvent = eventHandler decodeCommand commandQueue
+            discordOnEvent = onEvent eventQueue
           }
   logError $ display runDiscordResult
 
-decodeCommand :: Message -> Maybe Command
-decodeCommand Message {messageText = text, messageAuthor = author, messageChannel = channelId}
+decodeCommand :: Event -> Maybe Command
+decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author, messageChannel = channelId})
   | text == "!generate-token" = Just $ GenerateToken channelId author
   | text == "!authenticated" = Just $ AuthenticatedUsers channelId author
   | "!login " `Text.isPrefixOf` text =
@@ -54,6 +54,7 @@ decodeCommand Message {messageText = text, messageAuthor = author, messageChanne
           Nothing -> Nothing
       _ -> Nothing
   | otherwise = Nothing
+decodeCommand _ = Nothing
 
 handleCommand ::
   ( MonadReader env m,

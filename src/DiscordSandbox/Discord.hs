@@ -2,8 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module DiscordSandbox.Discord
-  ( initialBotState,
-    eventHandler,
+  ( onEvent,
     onStart,
     replyTo,
   )
@@ -16,20 +15,24 @@ import Discord.Types
   ( ChannelId,
     CreateEmbed (..),
     Event (..),
-    Message (..),
     User (..),
   )
-import qualified Discord.Types as Discord
 import Import
-import qualified RIO.Map as Map
-import qualified RIO.Set as Set
 
-initialBotState :: (MonadIO m) => m BotState
-initialBotState = do
-  authenticatedReference <- newTVarIO Set.empty
-  tokensReference <- newTVarIO Map.empty
-  pure $ BotState {authenticated = authenticatedReference, activeTokens = tokensReference}
+-- | When supplied as the `onStart` for `runDiscord` will pull out the active discord handle and fill the ref with it.
+-- This allows us to use the handle in another thread outside of the normal Discord context when we want to send events.
+onStart :: IORef DiscordHandle -> IO () -> DiscordHandler ()
+onStart handleReference onStartAction = do
+  discordHandle <- ask
+  writeIORef handleReference discordHandle
+  liftIO onStartAction
 
+-- | Forwards all received events to a queue of events, ideally handled in a separate thread and possibly other context.
+onEvent :: TQueue Event -> Event -> DiscordHandler ()
+onEvent eventQueue event = liftIO $ atomically $ writeTQueue eventQueue event
+
+-- | Automatically embeds a user's tag at the start of a message. Supports sending text, an embed or both.
+-- Requires a Discord handle in the executing context because we are using it to make REST calls.
 replyTo ::
   (MonadReader env m, HasDiscordHandle env, MonadIO m) =>
   ChannelId ->
@@ -51,26 +54,6 @@ class DiscordMention a where
 
 instance DiscordMention User where
   mention User {userId = userId'} = "<@" <> tshow userId' <> ">"
-
-onStart :: IORef DiscordHandle -> IO () -> DiscordHandler ()
-onStart handleReference onStartAction = do
-  discordHandle <- ask
-  writeIORef handleReference discordHandle
-  liftIO onStartAction
-
-eventHandler :: (Message -> Maybe command) -> TQueue command -> Event -> DiscordHandler ()
-eventHandler commandDecoder commandQueue (MessageCreate message)
-  | Discord.userIsBot (messageAuthor message) = pure ()
-  | otherwise = handleMessage commandDecoder commandQueue message
-eventHandler _ _ _ = pure ()
-
-handleMessage :: (Message -> Maybe command) -> TQueue command -> Message -> DiscordHandler ()
-handleMessage commandDecoder commandQueue message = do
-  case commandDecoder message of
-    Just command -> do
-      liftIO $ atomically $ writeTQueue commandQueue command
-    Nothing ->
-      pure ()
 
 replyTo' :: ChannelId -> User -> Maybe Text -> Maybe CreateEmbed -> DiscordHandler ()
 replyTo' channelId user text Nothing =

@@ -4,7 +4,7 @@ module Types where
 
 import Data.UUID (UUID)
 import Discord (DiscordHandle)
-import Discord.Types (ChannelId, CreateEmbed, User)
+import Discord.Types (ChannelId, CreateEmbed, User, Event)
 import RIO
 import RIO.Process
 
@@ -17,7 +17,7 @@ data App = App
   { appLogFunc :: !LogFunc,
     appProcessContext :: !ProcessContext,
     appOptions :: !Options,
-    appCommands :: TQueue Command,
+    appDiscordEvents :: TQueue Event,
     appBotState :: BotState,
     appDiscordHandle :: IORef DiscordHandle
   }
@@ -28,11 +28,11 @@ instance HasLogFunc App where
 instance HasProcessContext App where
   processContextL = lens appProcessContext (\x y -> x {appProcessContext = y})
 
-class HasDiscordInbox env where
-  discordInboxL :: Lens' env (TQueue Command)
+class HasDiscordEventQueue env where
+  discordEventQueueL :: Lens' env (TQueue Event)
 
-instance HasDiscordInbox App where
-  discordInboxL = lens appCommands (\x y -> x {appCommands = y})
+instance HasDiscordEventQueue App where
+  discordEventQueueL = lens appDiscordEvents (\x y -> x {appDiscordEvents = y})
 
 class HasBotState env where
   botStateL :: Lens' env BotState
