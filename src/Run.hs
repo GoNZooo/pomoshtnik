@@ -4,7 +4,6 @@
 
 module Run (run) where
 
-import Control.Concurrent (forkIO)
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
@@ -26,21 +25,21 @@ run = do
   handleReference <- asks appDiscordHandle
   appState <- ask
 
-  _ <- liftIO $
-    forkIO $
-      forever $ do
-        event <- atomically $ decodeCommand <$> readTQueue eventQueue
-        runRIO appState $ maybe mempty handleCommand event
+  let runCommandHandler = do
+        forever $ do
+          event <- atomically $ decodeCommand <$> readTQueue eventQueue
+          runRIO appState $ maybe mempty handleCommand event
+      runDiscordInputThread = do
+        liftIO $
+          Discord.runDiscord
+            Discord.def
+              { discordToken = token,
+                discordOnStart = onStart handleReference $ runRIO logFunction $ discordLog "Started reading messages",
+                discordOnEvent = onEvent eventQueue
+              }
+  ((), discordResult) <- concurrently runCommandHandler runDiscordInputThread
 
-  runDiscordResult <-
-    liftIO $
-      Discord.runDiscord
-        Discord.def
-          { discordToken = token,
-            discordOnStart = onStart handleReference $ runRIO logFunction $ discordLog "Started reading messages",
-            discordOnEvent = onEvent eventQueue
-          }
-  logError $ display runDiscordResult
+  logError $ display discordResult
 
 decodeCommand :: Event -> Maybe Command
 decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author, messageChannel = channelId})
