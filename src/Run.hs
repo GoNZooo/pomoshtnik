@@ -37,7 +37,7 @@ run = do
       Discord.runDiscord
         Discord.def
           { discordToken = token,
-            discordOnStart = onStart handleReference (runRIO logFunction $ discordLog "Started reading messages"),
+            discordOnStart = onStart handleReference $ runRIO logFunction $ discordLog "Started reading messages",
             discordOnEvent = onEvent eventQueue
           }
   logError $ display runDiscordResult
@@ -96,7 +96,7 @@ addNewToken :: (MonadReader env m, MonadIO m, HasActiveTokens env) => User -> m 
 addNewToken user = do
   tokensReference <- view activeTokensL
   newToken <- liftIO UUID.nextRandom
-  atomically $ modifyTVar' tokensReference (Map.insert user newToken)
+  atomically $ modifyTVar' tokensReference $ Map.insert user newToken
   pure newToken
 
 authenticateUser ::
