@@ -12,7 +12,7 @@ import Discord.Types (User (..))
 import RIO hiding (Handler)
 import qualified RIO.Text as Text
 import Types
-import Yesod.Core (Yesod, mkYesod, Value, toJSON)
+import Yesod.Core (Value, Yesod, mkYesod, toJSON)
 import qualified Yesod.Core as Yesod
 
 newtype WebBase = WebBase {unWebBase :: App}
