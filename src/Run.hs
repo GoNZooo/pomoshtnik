@@ -11,7 +11,7 @@ import Discord (RunDiscordOpts (..))
 import qualified Discord
 import Discord.Types (CreateEmbed (..), EmbedField (..), Event (..), Message (..), User (..))
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
-import DiscordSandbox.Web (Minimal (..))
+import DiscordSandbox.Web (WebBase (..))
 import Import
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified RIO.Map as Map
