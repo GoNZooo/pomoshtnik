@@ -9,8 +9,10 @@ import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
 import Discord (RunDiscordOpts (..))
 import qualified Discord
-import Discord.Types (CreateEmbed (..), EmbedField (..), Event (..), Message (..), User (..))
+import Discord.Types (CreateEmbed (..), CreateEmbedImage (..), EmbedField (..), Event (..), Message (..), User (..))
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
+import qualified DiscordSandbox.TMDB as TMDB
+import DiscordSandbox.TMDB.Types (CastEntry (..), Credits (..), Movie (..))
 import DiscordSandbox.Web (WebBase (..))
 import Import
 import qualified Network.Wai.Handler.Warp as Warp
@@ -46,16 +48,29 @@ run = do
         concurrently_ runCommandHandler $ Warp.run 4000 =<< Yesod.toWaiApp (WebBase appState)
   logErrorS "Discord" $ display discordResult
 
-decodeCommand :: Event -> Maybe Command
-decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author, messageChannel = channelId})
-  | text == "!generate-token" = Just $ GenerateToken channelId author
-  | text == "!authenticated" = Just $ AuthenticatedUsers channelId author
+decodeCommand :: Event -> Maybe IncomingCommand
+decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author, messageChannel = channelId'})
+  | text == "!generate-token" =
+    Just $ IncomingCommand {channelId = channelId', user = author, command = GenerateToken}
+  | text == "!authenticated" =
+    Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
   | "!login " `Text.isPrefixOf` text =
     case Text.split (== ' ') text of
       _ : token : _ ->
         case UUID.fromText token of
-          Just uuid -> Just $ Login channelId author uuid
+          Just uuid -> Just $ IncomingCommand {channelId = channelId', user = author, command = Login uuid}
           Nothing -> Nothing
+      _ -> Nothing
+  | "!movie " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command =
+                SearchMovie $ MovieTitle $ Text.intercalate (" " :: Text) rest
+            }
       _ -> Nothing
   | otherwise = Nothing
 decodeCommand _ = Nothing
@@ -66,19 +81,22 @@ handleCommand ::
     HasLogFunc env,
     HasActiveTokens env,
     HasAuthenticatedUsers env,
-    HasDiscordHandle env
+    HasDiscordHandle env,
+    HasTMDBAPIKey env,
+    HasTLSConnectionManager env,
+    HasTMDBImageConfigurationData env
   ) =>
-  Command ->
+  IncomingCommand ->
   m ()
-handleCommand (GenerateToken _channelId user) = do
-  newToken <- addNewToken user
-  discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user <> "'"
-handleCommand (Login channelId user suppliedToken) = do
-  whenM (authenticateUser user suppliedToken) $ do
-    replyTo channelId user (Just "You have been authenticated.") Nothing
-handleCommand (AuthenticatedUsers channelId user) = do
+handleCommand IncomingCommand {user = user', command = GenerateToken} = do
+  newToken <- addNewToken user'
+  discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user' <> "'"
+handleCommand IncomingCommand {channelId = channelId', user = user', command = Login suppliedToken} = do
+  whenM (authenticateUser user' suppliedToken) $ do
+    replyTo channelId' user' (Just "You have been authenticated.") Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = AuthenticatedUsers} = do
   usersReference <- view authenticatedUsersL
-  whenM (userIsAuthenticated user) $ do
+  whenM (userIsAuthenticated user') $ do
     authenticatedUsers <- readTVarIO usersReference
     let usersString =
           Text.intercalate
@@ -94,13 +112,66 @@ handleCommand (AuthenticatedUsers channelId user) = do
                     }
                 ]
             }
-    replyTo channelId user Nothing (Just messageEmbed)
+    replyTo channelId' user' Nothing (Just messageEmbed)
+handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchMovie movieTitle} = do
+  movieResult <- TMDB.searchMovieM movieTitle
+  case movieResult of
+    Right movie -> do
+      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+      let embed = movieEmbed imageBaseUrl PosterW185 movie
+      replyTo channelId' user' Nothing embed
+    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+
+movieEmbed :: Text -> PosterSize -> Movie -> Maybe CreateEmbed
+movieEmbed
+  imageBaseUrl
+  posterSize
+  Movie
+    { title = Just (MovieTitle title'),
+      overview = overview',
+      voteAverage = rating,
+      releaseDate = releaseDate',
+      imdbId = imdbId',
+      posterPath = posterPath',
+      credits = credits'
+    } =
+    let fields =
+          [ EmbedField {embedFieldName = "Description", embedFieldValue = overview', embedFieldInline = Nothing}
+          ]
+            <> maybe [] (\castEntries -> [castField castEntries]) (credits' & cast)
+        castField castEntries =
+          EmbedField
+            { embedFieldName = "Cast",
+              embedFieldValue = castText castEntries,
+              embedFieldInline = Just True
+            }
+        castText :: [CastEntry] -> Text
+        castText castEntries =
+          take maxCastEntries castEntries
+            & map
+              (\CastEntry {name = name', character = character'} -> mconcat ["**", name', "** as ", character'])
+            & Text.intercalate "\n"
+        titleText = mconcat [title', " (", tshow rating, maybe "" (", " <>) releaseDate', ")"]
+        embedImage = fmap (CreateEmbedImageUrl . posterUrl imageBaseUrl posterSize) posterPath'
+     in pure $
+          Discord.def
+            { createEmbedTitle = titleText,
+              createEmbedFields = fields,
+              createEmbedUrl = TMDB.imdbMovieUrl imdbId',
+              createEmbedImage = embedImage
+            }
+movieEmbed _ _ _ = Nothing
+
+posterUrl :: Text -> PosterSize -> Text -> Text
+posterUrl imageBaseUrl posterSize posterPath' =
+  let toUrlFragment posterSize' = removePrefix "Poster" (show posterSize') & camelCase & fromString
+   in mconcat [imageBaseUrl, toUrlFragment posterSize, posterPath']
 
 addNewToken :: (MonadReader env m, MonadIO m, HasActiveTokens env) => User -> m UUID
-addNewToken user = do
+addNewToken user' = do
   tokensReference <- view activeTokensL
   newToken <- liftIO UUID.nextRandom
-  atomically $ modifyTVar' tokensReference $ Map.insert user newToken
+  atomically $ modifyTVar' tokensReference $ Map.insert user' newToken
   pure newToken
 
 authenticateUser ::
@@ -108,22 +179,25 @@ authenticateUser ::
   User ->
   UUID ->
   m Bool
-authenticateUser user token = do
+authenticateUser user' token = do
   tokensReference <- view activeTokensL
   usersReference <- view authenticatedUsersL
   atomically $ do
     tokens <- readTVar tokensReference
-    if Just token /= Map.lookup user tokens
+    if Just token /= Map.lookup user' tokens
       then pure False
       else do
-        modifyTVar usersReference $ Set.insert user
+        modifyTVar usersReference $ Set.insert user'
         pure True
 
 userIsAuthenticated :: (MonadReader env m, MonadIO m, HasAuthenticatedUsers env) => User -> m Bool
-userIsAuthenticated user = do
+userIsAuthenticated user' = do
   usersReference <- view authenticatedUsersL
   users <- readTVarIO usersReference
-  pure $ user `Set.member` users
+  pure $ user' `Set.member` users
 
 discordLog :: (MonadIO m, MonadReader env m, HasLogFunc env) => Text -> m ()
 discordLog message = logInfoS "Discord" $ display message
+
+maxCastEntries :: Int
+maxCastEntries = 20

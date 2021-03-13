@@ -42,8 +42,8 @@ replyTo ::
   Maybe Text ->
   Maybe CreateEmbed ->
   m ()
-replyTo channelId user maybeText maybeEmbed = do
-  runDiscordAction $ replyTo' channelId user maybeText maybeEmbed
+replyTo channelId' user' maybeText maybeEmbed = do
+  runDiscordAction $ replyTo' channelId' user' maybeText maybeEmbed
 
 runDiscordAction :: (MonadReader env m, MonadIO m, HasDiscordHandle env) => DiscordHandler a -> m a
 runDiscordAction action = do
@@ -58,9 +58,9 @@ instance DiscordMention User where
   mention User {userId = userId'} = "<@" <> tshow userId' <> ">"
 
 replyTo' :: ChannelId -> User -> Maybe Text -> Maybe CreateEmbed -> DiscordHandler ()
-replyTo' channelId user text Nothing =
-  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
-   in void $ Discord.restCall $ CreateMessage channelId messageText'
-replyTo' channelId user text (Just embed) =
-  let messageText' = mconcat [mention user, maybe "" (" " <>) text]
-   in void $ Discord.restCall $ CreateMessageEmbed channelId messageText' embed
+replyTo' channelId' user' text Nothing =
+  let messageText' = mconcat [mention user', maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessage channelId' messageText'
+replyTo' channelId' user' text (Just embed) =
+  let messageText' = mconcat [mention user', maybe "" (" " <>) text]
+   in void $ Discord.restCall $ CreateMessageEmbed channelId' messageText' embed

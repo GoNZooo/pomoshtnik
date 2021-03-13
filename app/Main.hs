@@ -3,11 +3,15 @@
 
 module Main (main) where
 
+import qualified DiscordSandbox.TMDB as TMDB
+import qualified DiscordSandbox.TMDB.Types as TMDB
 import Import
+import Network.HTTP.Client.TLS (newTlsManager)
 import Options.Applicative.Simple
 import qualified Paths_discord_sandbox
 import RIO.Process
 import Run
+import qualified System.Environment as Environment
 
 main :: IO ()
 main = do
@@ -30,6 +34,11 @@ main = do
   botState <- initialBotState
   -- This will be filled in later in `onStart`,
   discordHandle <- newIORef $ error "`discordHandle` reference hasn't been filled in"
+  connectionManager <- TLSConnectionManager <$> newTlsManager
+  tmdbApiKey <- TMDBAPIKey <$> Environment.getEnv "TMDB_API_KEY"
+  tmdbImageConfigurationData <-
+    either (\error' -> error $ "Unable to get TMDB image configuration data: " <> error') TMDB.images
+      <$> TMDB.getImageConfigurationData connectionManager tmdbApiKey
 
   withLogFunc lo $ \lf ->
     let app =
@@ -39,7 +48,10 @@ main = do
               appOptions = options,
               appDiscordEvents = events,
               appBotState = botState,
-              appDiscordHandle = discordHandle
+              appDiscordHandle = discordHandle,
+              appConnectionManager = connectionManager,
+              appTmdbApiKey = tmdbApiKey,
+              appTmdbImageConfigurationData = tmdbImageConfigurationData
             }
      in runRIO app run
 

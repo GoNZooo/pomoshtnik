@@ -1,104 +1,17 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module DiscordSandbox.TMDB.Types where
 
-import Data.Aeson (FromJSON (..), Options (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
-import Data.List (stripPrefix)
-import RIO
-import qualified RIO.Char as Char
-import qualified RIO.Text as Text
-import qualified Text.Inflections as Inflections
-
-newtype MovieTitle = MovieTitle Text deriving (Eq, Show, FromJSON, ToJSON)
-
-newtype MovieId = MovieId Int deriving (Eq, Show, FromJSON, ToJSON)
-
-newtype APIKey = APIKey String
+import Import
 
 data APIQuery
-  = SearchMovie MovieTitle
-  | GetMovie MovieId
-
-data PosterSize
-  = PosterW92
-  | PosterW154
-  | PosterW185
-  | PosterW342
-  | PosterW500
-  | PosterW720
-  | PosterOriginal
-  deriving (Eq, Show, Generic)
-
-instance FromJSON PosterSize where
-  parseJSON value = Aeson.genericParseJSON (enumerationOptions "Poster") value
-
-instance ToJSON PosterSize where
-  toJSON value = Aeson.genericToJSON (enumerationOptions "Poster") value
-
-data ProfileSize
-  = ProfileW45
-  | ProfileW185
-  | ProfileW300
-  | ProfileH632
-  | ProfileOriginal
-  deriving (Eq, Show, Generic)
-
-instance FromJSON ProfileSize where
-  parseJSON value = Aeson.genericParseJSON (enumerationOptions "Profile") value
-
-instance ToJSON ProfileSize where
-  toJSON value = Aeson.genericToJSON (enumerationOptions "Profile") value
-
-data StillSize
-  = StillW92
-  | StillW185
-  | StillW300
-  | StillH632
-  | StillOriginal
-  deriving (Eq, Show, Generic)
-
-instance FromJSON StillSize where
-  parseJSON value = Aeson.genericParseJSON (enumerationOptions "Still") value
-
-instance ToJSON StillSize where
-  toJSON value = Aeson.genericToJSON (enumerationOptions "Still") value
-
-data BackdropSize
-  = BackdropW300
-  | BackdropW780
-  | BackdropW1280
-  | BackdropOriginal
-  deriving (Eq, Show, Generic)
-
-instance FromJSON BackdropSize where
-  parseJSON value = Aeson.genericParseJSON (enumerationOptions "Backdrop") value
-
-instance ToJSON BackdropSize where
-  toJSON value = Aeson.genericToJSON (enumerationOptions "Backdrop") value
-
-data ImageConfigurationData = ImageConfigurationData
-  { baseUrl :: String,
-    secureBaseUrl :: String,
-    posterSizes :: [PosterSize],
-    profileSizes :: [ProfileSize],
-    stillSizes :: [StillSize],
-    backdropSizes :: [BackdropSize]
-  }
-  deriving (Eq, Show, Generic)
-
-instance FromJSON ImageConfigurationData where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
-
-instance ToJSON ImageConfigurationData where
-  toJSON value = Aeson.genericToJSON recordOptions value
-
-recordOptions :: Options
-recordOptions = Aeson.defaultOptions {fieldLabelModifier = camelCaseToSnakeCase}
+  = SearchMovieQuery MovieTitle
+  | GetMovieQuery MovieId
+  | GetImageConfigurationData
 
 data ConfigurationData = ConfigurationData
   { images :: ImageConfigurationData,
@@ -158,7 +71,7 @@ instance ToJSON Credits where
   toJSON value = Aeson.genericToJSON recordOptions value
 
 data Movie = Movie
-  { posterPath :: Maybe String,
+  { posterPath :: Maybe Text,
     id :: Int,
     imdbId :: Text,
     title :: Maybe MovieTitle,
@@ -316,25 +229,3 @@ instance ToJSON MovieCandidate where
 --    total_results: U32
 --    results: []ShowCandidate
 --}
-
-enumerationOptions :: String -> Aeson.Options
-enumerationOptions prefix =
-  Aeson.defaultOptions
-    { constructorTagModifier = camelCase . removePrefix prefix
-    }
-
-identity :: a -> a
-identity = RIO.id
-
-removePrefix :: String -> String -> String
-removePrefix prefix string = maybe string identity $ stripPrefix prefix string
-
-camelCase :: String -> String
-camelCase (c : rest)
-  | Char.isAsciiUpper c = Char.toLower c : rest
-  | otherwise = c : rest
-camelCase [] = []
-
-camelCaseToSnakeCase :: String -> String
-camelCaseToSnakeCase string =
-  either (const string) Text.unpack $ Inflections.toUnderscore (Text.pack string)

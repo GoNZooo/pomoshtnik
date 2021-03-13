@@ -1,12 +1,29 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Types where
 
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as JSON
+import qualified Data.List as List
 import Data.UUID (UUID)
 import Discord (DiscordHandle)
-import Discord.Types (ChannelId, CreateEmbed, User, Event)
+import Discord.Types (ChannelId, CreateEmbed, Event, User)
+import Network.HTTP.Client (Manager)
 import RIO
+import qualified RIO.Char as Char
 import RIO.Process
+import qualified RIO.Text as Text
+import qualified Text.Inflections as Inflections
+
+newtype TLSConnectionManager = TLSConnectionManager Manager
+
+newtype TMDBAPIKey = TMDBAPIKey String
+
+newtype MovieTitle = MovieTitle Text deriving (Eq, Show, FromJSON, ToJSON)
+
+newtype MovieId = MovieId Int deriving (Eq, Show, FromJSON, ToJSON)
 
 -- | Command line arguments
 newtype Options = Options
@@ -18,8 +35,11 @@ data App = App
     appProcessContext :: !ProcessContext,
     appOptions :: !Options,
     appDiscordEvents :: TQueue Event,
-    appBotState :: BotState,
-    appDiscordHandle :: IORef DiscordHandle
+    appBotState :: !BotState,
+    appDiscordHandle :: IORef DiscordHandle,
+    appConnectionManager :: !TLSConnectionManager,
+    appTmdbApiKey :: !TMDBAPIKey,
+    appTmdbImageConfigurationData :: !ImageConfigurationData
   }
 
 instance HasLogFunc App where
@@ -27,6 +47,30 @@ instance HasLogFunc App where
 
 instance HasProcessContext App where
   processContextL = lens appProcessContext (\x y -> x {appProcessContext = y})
+
+class HasTLSConnectionManager env where
+  tlsConnectionManagerL :: Lens' env TLSConnectionManager
+
+instance HasTLSConnectionManager TLSConnectionManager where
+  tlsConnectionManagerL = lens id $ \_ y -> y
+
+instance HasTLSConnectionManager App where
+  tlsConnectionManagerL = lens appConnectionManager $ \x y -> x {appConnectionManager = y}
+
+class HasTMDBAPIKey env where
+  tmdbApiKeyL :: Lens' env TMDBAPIKey
+
+instance HasTMDBAPIKey TMDBAPIKey where
+  tmdbApiKeyL = lens id $ \_ y -> y
+
+instance HasTMDBAPIKey App where
+  tmdbApiKeyL = lens appTmdbApiKey $ \x y -> x {appTmdbApiKey = y}
+
+class HasTMDBImageConfigurationData env where
+  tmdbImageConfigurationDataL :: Lens' env ImageConfigurationData
+
+instance HasTMDBImageConfigurationData App where
+  tmdbImageConfigurationDataL = lens appTmdbImageConfigurationData $ \x y -> x {appTmdbImageConfigurationData = y}
 
 class HasDiscordEventQueue env where
   discordEventQueueL :: Lens' env (TQueue Event)
@@ -69,12 +113,114 @@ data BotState = BotState
     activeTokens :: TVar (Map User UUID)
   }
 
+data IncomingCommand = IncomingCommand {channelId :: ChannelId, user :: User, command :: Command}
+
 data Command
-  = Login ChannelId User UUID
-  | GenerateToken ChannelId User
-  | AuthenticatedUsers ChannelId User
+  = Login UUID
+  | GenerateToken
+  | AuthenticatedUsers
+  | SearchMovie MovieTitle
   deriving (Eq, Show)
 
 data OutgoingDiscordEvent
   = SendDiscordMessage ChannelId (Maybe Text) (Maybe CreateEmbed)
   | ReplyToUser ChannelId User (Maybe Text) (Maybe CreateEmbed)
+
+data ImageConfigurationData = ImageConfigurationData
+  { baseUrl :: Text,
+    secureBaseUrl :: Text,
+    posterSizes :: [PosterSize],
+    profileSizes :: [ProfileSize],
+    stillSizes :: [StillSize],
+    backdropSizes :: [BackdropSize]
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON ImageConfigurationData where
+  parseJSON value = JSON.genericParseJSON recordOptions value
+
+instance ToJSON ImageConfigurationData where
+  toJSON value = JSON.genericToJSON recordOptions value
+
+data PosterSize
+  = PosterW92
+  | PosterW154
+  | PosterW185
+  | PosterW342
+  | PosterW500
+  | PosterW720
+  | PosterW780
+  | PosterOriginal
+  deriving (Eq, Show, Generic)
+
+instance FromJSON PosterSize where
+  parseJSON value = JSON.genericParseJSON (enumerationOptions "Poster") value
+
+instance ToJSON PosterSize where
+  toJSON value = JSON.genericToJSON (enumerationOptions "Poster") value
+
+data ProfileSize
+  = ProfileW45
+  | ProfileW185
+  | ProfileW300
+  | ProfileH632
+  | ProfileOriginal
+  deriving (Eq, Show, Generic)
+
+instance FromJSON ProfileSize where
+  parseJSON value = JSON.genericParseJSON (enumerationOptions "Profile") value
+
+instance ToJSON ProfileSize where
+  toJSON value = JSON.genericToJSON (enumerationOptions "Profile") value
+
+data StillSize
+  = StillW92
+  | StillW185
+  | StillW300
+  | StillH632
+  | StillOriginal
+  deriving (Eq, Show, Generic)
+
+instance FromJSON StillSize where
+  parseJSON value = JSON.genericParseJSON (enumerationOptions "Still") value
+
+instance ToJSON StillSize where
+  toJSON value = JSON.genericToJSON (enumerationOptions "Still") value
+
+data BackdropSize
+  = BackdropW300
+  | BackdropW780
+  | BackdropW1280
+  | BackdropOriginal
+  deriving (Eq, Show, Generic)
+
+instance FromJSON BackdropSize where
+  parseJSON value = JSON.genericParseJSON (enumerationOptions "Backdrop") value
+
+instance ToJSON BackdropSize where
+  toJSON value = JSON.genericToJSON (enumerationOptions "Backdrop") value
+
+enumerationOptions :: String -> JSON.Options
+enumerationOptions prefix =
+  JSON.defaultOptions
+    { JSON.constructorTagModifier = camelCase . removePrefix prefix
+    }
+
+recordOptions :: JSON.Options
+recordOptions = JSON.defaultOptions {JSON.fieldLabelModifier = camelCaseToSnakeCase}
+
+identity :: a -> a
+identity = RIO.id
+
+removePrefix :: String -> String -> String
+removePrefix prefix string = maybe string identity $ List.stripPrefix prefix string
+
+camelCase :: String -> String
+camelCase (c : rest)
+  | Char.isAsciiUpper c = Char.toLower c : rest
+  | otherwise = c : rest
+camelCase [] = []
+
+camelCaseToSnakeCase :: String -> String
+camelCaseToSnakeCase string =
+  either (const string) Text.unpack $ Inflections.toUnderscore (Text.pack string)
