@@ -206,5 +206,6 @@
     <orderEntry type="library" name="vector-algorithms-0.8.0.4" level="project" />
     <orderEntry type="library" name="old-time-1.1.0.3" level="project" />
     <orderEntry type="library" name="th-lift-instances-0.1.18" level="project" />
+    <orderEntry type="library" name="inflections-0.4.0.6" level="project" />
   </component>
 </module>

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 40b771e728146e203c106dc4799b2ab07cfdf67da062e57695dcaf7703484a47
+-- hash: fb946bd529721842fc59826eed47481661d68f7b9046a2fcf5bf5c766b942e5a
 
 name:           discord-sandbox
 version:        0.1.0.0
@@ -28,6 +28,8 @@ source-repository head
 library
   exposed-modules:
       DiscordSandbox.Discord
+      DiscordSandbox.TMDB
+      DiscordSandbox.TMDB.Types
       DiscordSandbox.Web
       Import
       Run
@@ -39,9 +41,13 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.11 && <10
+      aeson
+    , base >=4.11 && <10
     , discord-haskell
     , emoji
+    , http-client
+    , http-client-tls
+    , inflections
     , rio >=0.1.12.0
     , uuid
     , wai
@@ -58,10 +64,14 @@ executable discord-sandbox-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.11 && <10
+      aeson
+    , base >=4.11 && <10
     , discord-haskell
     , discord-sandbox
     , emoji
+    , http-client
+    , http-client-tls
+    , inflections
     , optparse-simple
     , rio >=0.1.12.0
     , uuid
@@ -81,11 +91,15 @@ test-suite discord-sandbox-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.11 && <10
+      aeson
+    , base >=4.11 && <10
     , discord-haskell
     , discord-sandbox
     , emoji
     , hspec
+    , http-client
+    , http-client-tls
+    , inflections
     , rio >=0.1.12.0
     , uuid
     , wai
