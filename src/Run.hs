@@ -43,7 +43,7 @@ run = do
   (discordResult, ()) <-
     liftIO $
       concurrently runDiscordInputThread $
-        concurrently_ runCommandHandler $ Warp.run 4000 =<< Yesod.toWaiApp (Minimal appState)
+        concurrently_ runCommandHandler $ Warp.run 4000 =<< Yesod.toWaiApp (WebBase appState)
   logErrorS "Discord" $ display discordResult
 
 decodeCommand :: Event -> Maybe Command
