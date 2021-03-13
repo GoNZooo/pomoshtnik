@@ -25,6 +25,10 @@ dependencies:
 - discord-haskell
 - emoji
 - uuid
+- yesod-core
+- yesod-form
+- wai
+- warp
 
 ghc-options:
 - -Wall

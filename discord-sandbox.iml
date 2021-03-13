@@ -146,5 +146,65 @@
     <orderEntry type="library" name="cryptohash-md5-0.11.100.1" level="project" />
     <orderEntry type="library" name="cryptohash-sha1-0.11.100.1" level="project" />
     <orderEntry type="library" name="network-info-0.2.0.10" level="project" />
+    <orderEntry type="library" name="wai-3.2.2.1" level="project" />
+    <orderEntry type="library" name="warp-3.3.13" level="project" />
+    <orderEntry type="library" name="yesod-core-1.6.18.8" level="project" />
+    <orderEntry type="library" name="yesod-form-1.6.7" level="project" />
+    <orderEntry type="library" name="vault-0.3.1.4" level="project" />
+    <orderEntry type="library" name="auto-update-0.1.6" level="project" />
+    <orderEntry type="library" name="bsb-http-chunked-0.0.0.4" level="project" />
+    <orderEntry type="library" name="http-date-0.0.10" level="project" />
+    <orderEntry type="library" name="http2-2.0.5" level="project" />
+    <orderEntry type="library" name="iproute-1.7.10" level="project" />
+    <orderEntry type="library" name="simple-sendfile-0.2.30" level="project" />
+    <orderEntry type="library" name="time-manager-0.0.0" level="project" />
+    <orderEntry type="library" name="unix-compat-0.5.2" level="project" />
+    <orderEntry type="library" name="word8-0.1.3" level="project" />
+    <orderEntry type="library" name="blaze-html-0.9.1.2" level="project" />
+    <orderEntry type="library" name="blaze-markup-0.8.2.7" level="project" />
+    <orderEntry type="library" name="clientsession-0.9.1.2" level="project" />
+    <orderEntry type="library" name="conduit-1.3.4" level="project" />
+    <orderEntry type="library" name="conduit-extra-1.3.5" level="project" />
+    <orderEntry type="library" name="fast-logger-3.0.2" level="project" />
+    <orderEntry type="library" name="monad-logger-0.3.36" level="project" />
+    <orderEntry type="library" name="path-pieces-0.2.1" level="project" />
+    <orderEntry type="library" name="resourcet-1.2.4.2" level="project" />
+    <orderEntry type="library" name="shakespeare-2.0.25" level="project" />
+    <orderEntry type="library" name="wai-extra-3.0.32" level="project" />
+    <orderEntry type="library" name="wai-logger-2.3.6" level="project" />
+    <orderEntry type="library" name="byteable-0.1.1" level="project" />
+    <orderEntry type="library" name="email-validate-2.3.2.13" level="project" />
+    <orderEntry type="library" name="persistent-2.10.5.3" level="project" />
+    <orderEntry type="library" name="semigroups-0.19.1" level="project" />
+    <orderEntry type="library" name="xss-sanitize-0.3.6" level="project" />
+    <orderEntry type="library" name="yesod-persistent-1.6.0.5" level="project" />
+    <orderEntry type="library" name="network-byte-order-0.1.6" level="project" />
+    <orderEntry type="library" name="psqueues-0.2.7.2" level="project" />
+    <orderEntry type="library" name="appar-0.1.8" level="project" />
+    <orderEntry type="library" name="byteorder-1.0.4" level="project" />
+    <orderEntry type="library" name="cipher-aes-0.2.11" level="project" />
+    <orderEntry type="library" name="cprng-aes-0.6.1" level="project" />
+    <orderEntry type="library" name="crypto-random-0.0.9" level="project" />
+    <orderEntry type="library" name="skein-1.0.9.4" level="project" />
+    <orderEntry type="library" name="mono-traversable-1.0.15.1" level="project" />
+    <orderEntry type="library" name="easy-file-0.2.2" level="project" />
+    <orderEntry type="library" name="unix-time-0.4.7" level="project" />
+    <orderEntry type="library" name="lifted-base-0.2.3.12" level="project" />
+    <orderEntry type="library" name="monad-loops-0.4.3" level="project" />
+    <orderEntry type="library" name="stm-chans-3.0.0.4" level="project" />
+    <orderEntry type="library" name="th-lift-0.8.2" level="project" />
+    <orderEntry type="library" name="void-0.7.3" level="project" />
+    <orderEntry type="library" name="resource-pool-0.2.3.2" level="project" />
+    <orderEntry type="library" name="silently-1.2.5.1" level="project" />
+    <orderEntry type="library" name="css-text-0.1.3.0" level="project" />
+    <orderEntry type="library" name="tagsoup-0.14.8" level="project" />
+    <orderEntry type="library" name="utf8-string-1.0.1.1" level="project" />
+    <orderEntry type="library" name="persistent-template-2.8.2.3" level="project" />
+    <orderEntry type="library" name="crypto-cipher-types-0.0.9" level="project" />
+    <orderEntry type="library" name="securemem-0.1.10" level="project" />
+    <orderEntry type="library" name="split-0.2.3.4" level="project" />
+    <orderEntry type="library" name="vector-algorithms-0.8.0.4" level="project" />
+    <orderEntry type="library" name="old-time-1.1.0.3" level="project" />
+    <orderEntry type="library" name="th-lift-instances-0.1.18" level="project" />
   </component>
 </module>

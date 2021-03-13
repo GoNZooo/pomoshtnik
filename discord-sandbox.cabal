@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d97d223ceb1dbc7cb8c10307cd1ce38a83fbb04464ba8d776a2b5b5d52e0c399
+-- hash: 40b771e728146e203c106dc4799b2ab07cfdf67da062e57695dcaf7703484a47
 
 name:           discord-sandbox
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       DiscordSandbox.Discord
+      DiscordSandbox.Web
       Import
       Run
       Types
@@ -43,6 +44,10 @@ library
     , emoji
     , rio >=0.1.12.0
     , uuid
+    , wai
+    , warp
+    , yesod-core
+    , yesod-form
   default-language: Haskell2010
 
 executable discord-sandbox-exe
@@ -60,6 +65,10 @@ executable discord-sandbox-exe
     , optparse-simple
     , rio >=0.1.12.0
     , uuid
+    , wai
+    , warp
+    , yesod-core
+    , yesod-form
   default-language: Haskell2010
 
 test-suite discord-sandbox-test
@@ -79,4 +88,8 @@ test-suite discord-sandbox-test
     , hspec
     , rio >=0.1.12.0
     , uuid
+    , wai
+    , warp
+    , yesod-core
+    , yesod-form
   default-language: Haskell2010

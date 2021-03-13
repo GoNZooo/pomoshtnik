@@ -11,11 +11,14 @@ import Discord (RunDiscordOpts (..))
 import qualified Discord
 import Discord.Types (CreateEmbed (..), EmbedField (..), Event (..), Message (..), User (..))
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
+import DiscordSandbox.Web (Minimal (..))
 import Import
+import qualified Network.Wai.Handler.Warp as Warp
 import qualified RIO.Map as Map
 import qualified RIO.Set as Set
 import qualified RIO.Text as Text
 import qualified System.Environment as Environment
+import qualified Yesod.Core as Yesod
 
 run :: RIO App ()
 run = do
@@ -37,9 +40,11 @@ run = do
                 discordOnStart = onStart handleReference $ runRIO logFunction $ discordLog "Started reading messages",
                 discordOnEvent = onEvent eventQueue
               }
-  ((), discordResult) <- concurrently runCommandHandler runDiscordInputThread
-
-  logError $ display discordResult
+  (discordResult, ()) <-
+    liftIO $
+      concurrently runDiscordInputThread $
+        concurrently_ runCommandHandler $ Warp.run 4000 =<< Yesod.toWaiApp (Minimal appState)
+  logErrorS "Discord" $ display discordResult
 
 decodeCommand :: Event -> Maybe Command
 decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author, messageChannel = channelId})
