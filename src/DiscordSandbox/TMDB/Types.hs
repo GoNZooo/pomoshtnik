@@ -13,6 +13,7 @@ import Import
 
 data APIQuery
   = SearchMovieQuery MovieTitle
+  | SearchMovieCandidatesQuery MovieTitle
   | GetMovieQuery MovieId
   | SearchPersonQuery PersonName
   | GetPersonQuery PersonId

@@ -19,15 +19,15 @@ import qualified Text.Inflections as Inflections
 
 newtype TLSConnectionManager = TLSConnectionManager Manager
 
-newtype TMDBAPIKey = TMDBAPIKey String
+newtype TMDBAPIKey = TMDBAPIKey {unTMDBAPIKey :: String}
 
-newtype MovieTitle = MovieTitle Text deriving (Eq, Show, FromJSON, ToJSON)
+newtype MovieTitle = MovieTitle {unMovieTitle :: Text} deriving (Eq, Show, FromJSON, ToJSON)
 
-newtype MovieId = MovieId Int deriving (Eq, Show, FromJSON, ToJSON)
+newtype MovieId = MovieId {unMovieId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 
-newtype PersonName = PersonName Text deriving (Eq, Show, FromJSON, ToJSON)
+newtype PersonName = PersonName {unPersonName :: Text} deriving (Eq, Show, FromJSON, ToJSON)
 
-newtype PersonId = PersonId Int deriving (Eq, Show, FromJSON, ToJSON)
+newtype PersonId = PersonId {unPersonId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 
 -- | Command line arguments
 newtype Options = Options
@@ -124,6 +124,8 @@ data Command
   | GenerateToken
   | AuthenticatedUsers
   | SearchMovie MovieTitle
+  | SearchMovieCandidates MovieTitle
+  | GetMovie MovieId
   | SearchPerson PersonName
   deriving (Eq, Show)
 

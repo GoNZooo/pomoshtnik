@@ -20,6 +20,7 @@ import DiscordSandbox.TMDB.Types
     KnownForMovieData (..),
     KnownForShowData (..),
     Movie (..),
+    MovieCandidate (..),
     Person (..),
     PersonCandidate (..),
   )
@@ -82,6 +83,26 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
                 SearchMovie $ MovieTitle $ Text.intercalate (" " :: Text) rest
             }
       _ -> Nothing
+  | "!movie-candidates " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command =
+                SearchMovieCandidates $ MovieTitle $ Text.intercalate (" " :: Text) rest
+            }
+      _ -> Nothing
+  | "!movie-by-id " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : rest ->
+        let maybeId = fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
+         in case maybeId of
+              Just movieId ->
+                Just $ IncomingCommand {channelId = channelId', user = author, command = GetMovie movieId}
+              Nothing -> Nothing
+      _ -> Nothing
   | "!person " `Text.isPrefixOf` text =
     case Text.split (== ' ') text of
       _ : rest ->
@@ -142,6 +163,21 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = S
       let embed = movieEmbed imageBaseUrl PosterW780 movie
       replyTo channelId' user' Nothing embed
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchMovieCandidates movieTitle} = do
+  movieCandidatesResult <- TMDB.searchMovieCandidatesM movieTitle
+  case movieCandidatesResult of
+    Right movieCandidates -> do
+      let embed = Just $ movieCandidatesEmbed movieCandidates
+      replyTo channelId' user' Nothing embed
+    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = GetMovie movieId} = do
+  movieCandidatesResult <- TMDB.getMovieM movieId
+  case movieCandidatesResult of
+    Right movie -> do
+      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+      let embed = movieEmbed imageBaseUrl PosterW780 movie
+      replyTo channelId' user' Nothing embed
+    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchPerson personName} = do
   personCandidateResult <- TMDB.searchPersonM personName
   case personCandidateResult of
@@ -194,6 +230,32 @@ movieEmbed
               createEmbedImage = embedImage
             }
 movieEmbed _ _ _ = Nothing
+
+movieCandidatesEmbed :: [MovieCandidate] -> CreateEmbed
+movieCandidatesEmbed candidates =
+  let fields =
+        take 10 candidates
+          & fmap
+            ( \MovieCandidate
+                 { title = title',
+                   id = id',
+                   overview = overview',
+                   voteAverage = voteAverage',
+                   releaseDate = releaseDate'
+                 } ->
+                  EmbedField
+                    { embedFieldName =
+                        mconcat
+                          [maybe "" unMovieTitle title', "(", tshow $ unMovieId id', ", ", tshow voteAverage']
+                          <> maybe "" (", " <>) releaseDate'
+                          <> ")",
+                      embedFieldValue = overview',
+                      embedFieldInline = Nothing
+                    }
+            )
+   in Discord.def
+        { createEmbedFields = fields
+        }
 
 personEmbed :: Text -> ProfileSize -> PersonCandidate -> Person -> Maybe CreateEmbed
 personEmbed

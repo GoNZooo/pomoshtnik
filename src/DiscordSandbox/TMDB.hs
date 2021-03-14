@@ -23,6 +23,15 @@ apiRequest (TMDBAPIKey key) (SearchMovieQuery (MovieTitle movieTitle)) =
         ]
       initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/movie")
    in initialRequest & HTTP.setQueryString parameters
+apiRequest (TMDBAPIKey key) (SearchMovieCandidatesQuery (MovieTitle movieTitle)) =
+  let parameters =
+        [ ("query", Just $ encodeUtf8 movieTitle),
+          ("language", Just "en-US"),
+          ("page", Just $ fromString $ show (1 :: Int)),
+          ("api_key", Just $ fromString key)
+        ]
+      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/movie")
+   in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (GetMovieQuery (MovieId movieId)) =
   let parameters =
         [("language", Just "en_US"), ("api_key", Just $ fromString key), ("append_to_response", Just "credits")]
@@ -68,6 +77,24 @@ searchMovie (TLSConnectionManager manager) apiKey movieTitle = do
     Right MovieSearchResult {results = []} -> pure $ Left "No results returned"
     Right MovieSearchResult {results = MovieCandidate {id = movieId} : _rest} ->
       getMovie (TLSConnectionManager manager) apiKey movieId
+    Left error' -> pure $ Left error'
+
+searchMovieCandidatesM ::
+  (MonadReader env m, MonadIO m, HasTLSConnectionManager env, HasTMDBAPIKey env) =>
+  MovieTitle ->
+  m (Either String [MovieCandidate])
+searchMovieCandidatesM movieTitle = do
+  manager <- view tlsConnectionManagerL
+  apiKey <- view tmdbApiKeyL
+
+  liftIO $ searchMovieCandidates manager apiKey movieTitle
+
+searchMovieCandidates :: TLSConnectionManager -> TMDBAPIKey -> MovieTitle -> IO (Either String [MovieCandidate])
+searchMovieCandidates (TLSConnectionManager manager) apiKey movieTitle = do
+  let request = apiRequest apiKey (SearchMovieCandidatesQuery movieTitle)
+  body <- responseBody <$> HTTP.httpLbs request manager
+  case JSON.eitherDecode' body of
+    Right MovieSearchResult {results = results'} -> pure $ Right results'
     Left error' -> pure $ Left error'
 
 getMovieM ::
