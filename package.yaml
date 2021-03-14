@@ -33,6 +33,7 @@ dependencies:
   - inflections
   - http-client
   - http-client-tls
+  - unordered-containers
 
 ghc-options:
   - -Wall

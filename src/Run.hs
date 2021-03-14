@@ -1,3 +1,4 @@
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -12,7 +13,16 @@ import qualified Discord
 import Discord.Types (CreateEmbed (..), CreateEmbedImage (..), EmbedField (..), Event (..), Message (..), User (..))
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
 import qualified DiscordSandbox.TMDB as TMDB
-import DiscordSandbox.TMDB.Types (CastEntry (..), Credits (..), Movie (..))
+import DiscordSandbox.TMDB.Types
+  ( CastEntry (..),
+    Credits (..),
+    KnownFor (..),
+    KnownForMovieData (..),
+    KnownForShowData (..),
+    Movie (..),
+    Person (..),
+    PersonCandidate (..),
+  )
 import DiscordSandbox.Web (WebBase (..))
 import Import
 import qualified Network.Wai.Handler.Warp as Warp
@@ -72,6 +82,17 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
                 SearchMovie $ MovieTitle $ Text.intercalate (" " :: Text) rest
             }
       _ -> Nothing
+  | "!person " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command =
+                SearchPerson $ PersonName $ Text.intercalate (" " :: Text) rest
+            }
+      _ -> Nothing
   | otherwise = Nothing
 decodeCommand _ = Nothing
 
@@ -121,6 +142,18 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = S
       let embed = movieEmbed imageBaseUrl PosterW780 movie
       replyTo channelId' user' Nothing embed
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchPerson personName} = do
+  personCandidateResult <- TMDB.searchPersonM personName
+  case personCandidateResult of
+    Right personCandidate@PersonCandidate {id = personId} -> do
+      personResult <- TMDB.getPersonM personId
+      case personResult of
+        Right person -> do
+          ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+          let embed = personEmbed imageBaseUrl ProfileOriginal personCandidate person
+          replyTo channelId' user' Nothing embed
+        Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
 
 movieEmbed :: Text -> PosterSize -> Movie -> Maybe CreateEmbed
 movieEmbed
@@ -162,10 +195,86 @@ movieEmbed
             }
 movieEmbed _ _ _ = Nothing
 
+personEmbed :: Text -> ProfileSize -> PersonCandidate -> Person -> Maybe CreateEmbed
+personEmbed
+  imageBaseUrl
+  profileSize
+  PersonCandidate {knownFor = knownFor'}
+  Person
+    { name = PersonName name',
+      popularity = popularity',
+      imdbId = imdbId',
+      profilePath = profilePath',
+      knownForDepartment = knownForDepartment'
+    } =
+    let fields = movieFields knownFor'
+        movieFields :: [KnownFor] -> [EmbedField]
+        movieFields = fmap knownForToField
+        knownForToField :: KnownFor -> EmbedField
+        knownForToField
+          ( KnownForMovie
+              KnownForMovieData
+                { title = title',
+                  voteAverage = voteAverage',
+                  releaseDate = releaseDate',
+                  overview = overview'
+                }
+            ) =
+            EmbedField
+              { embedFieldName =
+                  mconcat
+                    [ maybe "" identity releaseDate',
+                      ": ",
+                      maybe "" identity title',
+                      " (",
+                      tshow voteAverage',
+                      ")"
+                    ],
+                embedFieldValue = overview',
+                embedFieldInline = Nothing
+              }
+        knownForToField
+          ( KnownForShow
+              KnownForShowData
+                { firstAirDate = firstAirDate',
+                  overview = overview',
+                  voteAverage = voteAverage',
+                  name = showName
+                }
+            ) =
+            EmbedField
+              { embedFieldName =
+                  mconcat
+                    [ maybe "" identity firstAirDate',
+                      ": ",
+                      maybe "" identity showName,
+                      " (",
+                      tshow voteAverage',
+                      ")"
+                    ],
+                embedFieldValue = overview',
+                embedFieldInline = Nothing
+              }
+        embedImage = fmap (CreateEmbedImageUrl . profileUrl imageBaseUrl profileSize) profilePath'
+     in pure $
+          Discord.def
+            { createEmbedTitle = name',
+              createEmbedFields = fields,
+              createEmbedUrl = TMDB.imdbPersonUrl imdbId',
+              createEmbedImage = embedImage,
+              createEmbedFooterText =
+                "Known for: " <> knownForDepartment' <> "    " <> "Popularity: " <> tshow popularity'
+            }
+
 posterUrl :: Text -> PosterSize -> Text -> Text
 posterUrl imageBaseUrl posterSize posterPath' =
   let toUrlFragment posterSize' = removePrefix "Poster" (show posterSize') & camelCase & fromString
    in mconcat [imageBaseUrl, toUrlFragment posterSize, posterPath']
+
+profileUrl :: Text -> ProfileSize -> Text -> Text
+profileUrl imageBaseUrl profileSize profilePath' =
+  let toUrlFragment posterSize' = removePrefix "Profile" (show posterSize') & camelCase & fromString
+   in mconcat [imageBaseUrl, toUrlFragment profileSize, profilePath']
 
 addNewToken :: (MonadReader env m, MonadIO m, HasActiveTokens env) => User -> m UUID
 addNewToken user' = do

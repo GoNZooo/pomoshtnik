@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fb946bd529721842fc59826eed47481661d68f7b9046a2fcf5bf5c766b942e5a
+-- hash: 547fa212addead17e0b703fa67fd50407975ca4ef300e9e34368804188de8d28
 
 name:           discord-sandbox
 version:        0.1.0.0
@@ -49,6 +49,7 @@ library
     , http-client-tls
     , inflections
     , rio >=0.1.12.0
+    , unordered-containers
     , uuid
     , wai
     , warp
@@ -74,6 +75,7 @@ executable discord-sandbox-exe
     , inflections
     , optparse-simple
     , rio >=0.1.12.0
+    , unordered-containers
     , uuid
     , wai
     , warp
@@ -101,6 +103,7 @@ test-suite discord-sandbox-test
     , http-client-tls
     , inflections
     , rio >=0.1.12.0
+    , unordered-containers
     , uuid
     , wai
     , warp

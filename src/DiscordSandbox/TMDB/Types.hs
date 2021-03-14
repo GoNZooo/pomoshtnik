@@ -1,16 +1,21 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module DiscordSandbox.TMDB.Types where
 
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.HashMap.Strict as HashMap
 import Import
 
 data APIQuery
   = SearchMovieQuery MovieTitle
   | GetMovieQuery MovieId
+  | SearchPersonQuery PersonName
+  | GetPersonQuery PersonId
   | GetImageConfigurationData
 
 data ConfigurationData = ConfigurationData
@@ -72,7 +77,7 @@ instance ToJSON Credits where
 
 data Movie = Movie
   { posterPath :: Maybe Text,
-    id :: Int,
+    id :: MovieId,
     imdbId :: Text,
     title :: Maybe MovieTitle,
     voteAverage :: Float,
@@ -137,63 +142,117 @@ instance ToJSON Episode where
 --    last_episode_to_air: ?Episode
 --    seasons: []Season
 --}
---
---struct Person {
---    popularity: F32
---    name: String
---    id: U32
---    profile_path: ?String
---    known_for_department: String
---    imdb_id: String
---}
---
---
---struct ShowCandidate {
---    poster_path: ?String
---    id: U32
---    name: String
---    vote_average: F32
---    first_air_date: ?String
---    overview: String
---}
---
---struct KnownForMovieData {
---    poster_path: ?String
---    id: U32
---    title: ?String
---    vote_average: F32
---    release_date: ?String
---    overview: String
---}
---
---struct KnownForShowData {
---    poster_path: ?String
---    id: U32
---    vote_average: F32
---    overview: String
---    first_air_date: ?String
---    name: ?String
---}
---
---union(tag = media_type, embedded) KnownFor {
---    movie: KnownForMovieData
---    tv: KnownForShowData
---}
---
---struct PersonCandidate {
---    popularity: F32
---    name: String
---    id: U32
---    profile_path: ?String
---    known_for: []KnownFor
---    known_for_department: String
---}
---
---struct PersonSearchResult {
---    page: U32
---    total_results: U32
---    results: []PersonCandidate
---}
+
+data Person = Person
+  { popularity :: Float,
+    name :: PersonName,
+    id :: PersonId,
+    profilePath :: Maybe Text,
+    knownForDepartment :: Text,
+    imdbId :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON Person where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON Person where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data PersonCandidate = PersonCandidate
+  { popularity :: Float,
+    name :: Text,
+    id :: PersonId,
+    profilePath :: Maybe Text,
+    knownFor :: [KnownFor],
+    knownForDepartment :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON PersonCandidate where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON PersonCandidate where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data KnownForMovieData = KnownForMovieData
+  { posterPath :: Maybe Text,
+    id :: MovieId,
+    title :: Maybe Text,
+    voteAverage :: Float,
+    releaseDate :: Maybe Text,
+    overview :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON KnownForMovieData where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON KnownForMovieData where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data KnownForShowData = KnownForShowData
+  { posterPath :: Maybe Text,
+    id :: Int,
+    voteAverage :: Float,
+    overview :: Text,
+    firstAirDate :: Maybe Text,
+    name :: Maybe Text
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON KnownForShowData where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON KnownForShowData where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data KnownFor
+  = KnownForMovie KnownForMovieData
+  | KnownForShow KnownForShowData
+  deriving (Eq, Show, Generic)
+
+instance FromJSON KnownFor where
+  parseJSON value =
+    Aeson.withObject
+      "KnownFor"
+      ( \o -> do
+          mediaType :: Text <- o .: "media_type"
+          case mediaType of
+            "movie" -> do
+              knownForMovieData <- parseJSON value
+              pure $ KnownForMovie knownForMovieData
+            "tv" -> do
+              knownForShowData <- parseJSON value
+              pure $ KnownForShow knownForShowData
+            _ -> error "Need 'movie' or 'tv' tag in 'media_type'"
+      )
+      value
+
+instance ToJSON KnownFor where
+  toJSON (KnownForMovie knownForMovieData) =
+    case (Aeson.object ["media_type" .= ("movie" :: Text)], toJSON knownForMovieData) of
+      (Object tag, Object knownForMovieDataObject) ->
+        Object $ HashMap.union tag knownForMovieDataObject
+      _ -> error "tag or `knownForMovieData` did not decode into object"
+  toJSON (KnownForShow knownForShowData) =
+    case (Aeson.object ["media_type" .= ("tv" :: Text)], toJSON knownForShowData) of
+      (Object tag, Object knownForShowDataObject) ->
+        Object $ HashMap.union tag knownForShowDataObject
+      _ -> error "tag or `knownForShowData` did not decode into object"
+
+data PersonSearchResult = PersonSearchResult
+  { page :: Int,
+    totalResults :: Int,
+    results :: [PersonCandidate]
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON PersonSearchResult where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON PersonSearchResult where
+  toJSON value = Aeson.genericToJSON recordOptions value
 
 data MovieSearchResult = MovieSearchResult
   { page :: Int,

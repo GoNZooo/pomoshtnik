@@ -28,6 +28,23 @@ apiRequest (TMDBAPIKey key) (GetMovieQuery (MovieId movieId)) =
         [("language", Just "en_US"), ("api_key", Just $ fromString key), ("append_to_response", Just "credits")]
       initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "movie/" <> show movieId)
    in initialRequest & HTTP.setQueryString parameters
+apiRequest (TMDBAPIKey key) (SearchPersonQuery (PersonName personName)) =
+  let parameters =
+        [ ("query", Just $ encodeUtf8 personName),
+          ("language", Just "en-US"),
+          ("page", Just $ fromString $ show (1 :: Int)),
+          ("api_key", Just $ fromString key)
+        ]
+      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/person")
+   in initialRequest & HTTP.setQueryString parameters
+apiRequest (TMDBAPIKey key) (GetPersonQuery (PersonId personId)) =
+  let parameters =
+        [ ("language", Just "en_US"),
+          ("api_key", Just $ fromString key),
+          ("append_to_response", Just "combined_credits")
+        ]
+      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "person/" <> show personId)
+   in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) GetImageConfigurationData =
   let parameters = [("api_key", Just $ fromString key)]
       initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "configuration")
@@ -70,8 +87,47 @@ getMovie (TLSConnectionManager manager) apiKey movieId = do
 
   pure $ JSON.eitherDecode' body
 
+searchPersonM ::
+  (MonadReader env m, MonadIO m, HasTLSConnectionManager env, HasTMDBAPIKey env) =>
+  PersonName ->
+  m (Either String PersonCandidate)
+searchPersonM personName = do
+  manager <- view tlsConnectionManagerL
+  apiKey <- view tmdbApiKeyL
+
+  liftIO $ searchPerson manager apiKey personName
+
+searchPerson :: TLSConnectionManager -> TMDBAPIKey -> PersonName -> IO (Either String PersonCandidate)
+searchPerson (TLSConnectionManager manager) apiKey personName = do
+  let request = apiRequest apiKey (SearchPersonQuery personName)
+  body <- responseBody <$> HTTP.httpLbs request manager
+  case JSON.eitherDecode' body of
+    Right PersonSearchResult {results = []} -> pure $ Left "No results returned"
+    Right PersonSearchResult {results = personCandidate : _rest} -> pure $ Right personCandidate
+    Left error' -> pure $ Left error'
+
+getPersonM ::
+  (MonadReader env m, MonadIO m, HasTLSConnectionManager env, HasTMDBAPIKey env) =>
+  PersonId ->
+  m (Either String Person)
+getPersonM personId = do
+  manager <- view tlsConnectionManagerL
+  apiKey <- view tmdbApiKeyL
+
+  liftIO $ getPerson manager apiKey personId
+
+getPerson :: TLSConnectionManager -> TMDBAPIKey -> PersonId -> IO (Either String Person)
+getPerson (TLSConnectionManager manager) apiKey personId = do
+  let request = apiRequest apiKey (GetPersonQuery personId)
+  body <- responseBody <$> HTTP.httpLbs request manager
+
+  pure $ JSON.eitherDecode' body
+
 imdbMovieUrl :: Text -> Text
 imdbMovieUrl = ("https://www.imdb.com/title/" <>)
+
+imdbPersonUrl :: Text -> Text
+imdbPersonUrl = ("https://www.imdb.com/name/" <>)
 
 tmdbPosterUrl :: (MonadReader env m, HasTMDBImageConfigurationData env) => Text -> m Text
 tmdbPosterUrl posterPath' = do

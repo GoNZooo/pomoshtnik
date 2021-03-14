@@ -25,6 +25,10 @@ newtype MovieTitle = MovieTitle Text deriving (Eq, Show, FromJSON, ToJSON)
 
 newtype MovieId = MovieId Int deriving (Eq, Show, FromJSON, ToJSON)
 
+newtype PersonName = PersonName Text deriving (Eq, Show, FromJSON, ToJSON)
+
+newtype PersonId = PersonId Int deriving (Eq, Show, FromJSON, ToJSON)
+
 -- | Command line arguments
 newtype Options = Options
   { optionsVerbose :: Bool
@@ -120,6 +124,7 @@ data Command
   | GenerateToken
   | AuthenticatedUsers
   | SearchMovie MovieTitle
+  | SearchPerson PersonName
   deriving (Eq, Show)
 
 data OutgoingDiscordEvent
