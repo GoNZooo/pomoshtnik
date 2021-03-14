@@ -37,6 +37,29 @@ apiRequest (TMDBAPIKey key) (GetMovieQuery (MovieId movieId)) =
         [("language", Just "en_US"), ("api_key", Just $ fromString key), ("append_to_response", Just "credits")]
       initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "movie/" <> show movieId)
    in initialRequest & HTTP.setQueryString parameters
+apiRequest (TMDBAPIKey key) (SearchShowQuery (ShowTitle showTitle)) =
+  let parameters =
+        [ ("query", Just $ encodeUtf8 showTitle),
+          ("language", Just "en-US"),
+          ("page", Just $ fromString $ show (1 :: Int)),
+          ("api_key", Just $ fromString key)
+        ]
+      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/tv")
+   in initialRequest & HTTP.setQueryString parameters
+apiRequest (TMDBAPIKey key) (SearchShowCandidatesQuery (ShowTitle showTitle)) =
+  let parameters =
+        [ ("query", Just $ encodeUtf8 showTitle),
+          ("language", Just "en-US"),
+          ("page", Just $ fromString $ show (1 :: Int)),
+          ("api_key", Just $ fromString key)
+        ]
+      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/tv")
+   in initialRequest & HTTP.setQueryString parameters
+apiRequest (TMDBAPIKey key) (GetShowQuery (ShowId showId)) =
+  let parameters =
+        [("language", Just "en_US"), ("api_key", Just $ fromString key), ("append_to_response", Just "credits,external_ids")]
+      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "tv/" <> show showId)
+   in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (SearchPersonQuery (PersonName personName)) =
   let parameters =
         [ ("query", Just $ encodeUtf8 personName),
@@ -110,6 +133,61 @@ getMovieM movieId = do
 getMovie :: TLSConnectionManager -> TMDBAPIKey -> MovieId -> IO (Either String Movie)
 getMovie (TLSConnectionManager manager) apiKey movieId = do
   let request = apiRequest apiKey (GetMovieQuery movieId)
+  body <- responseBody <$> HTTP.httpLbs request manager
+
+  pure $ JSON.eitherDecode' body
+
+searchShowM ::
+  (MonadReader env m, MonadIO m, HasTLSConnectionManager env, HasTMDBAPIKey env) =>
+  ShowTitle ->
+  m (Either String TVShow)
+searchShowM showTitle = do
+  manager <- view tlsConnectionManagerL
+  apiKey <- view tmdbApiKeyL
+
+  liftIO $ searchShow manager apiKey showTitle
+
+searchShow :: TLSConnectionManager -> TMDBAPIKey -> ShowTitle -> IO (Either String TVShow)
+searchShow (TLSConnectionManager manager) apiKey showTitle = do
+  let request = apiRequest apiKey (SearchShowQuery showTitle)
+  body <- responseBody <$> HTTP.httpLbs request manager
+  case JSON.eitherDecode' body of
+    Right ShowSearchResult {results = []} -> pure $ Left "No results returned"
+    Right ShowSearchResult {results = ShowCandidate {id = showId} : _rest} ->
+      getShow (TLSConnectionManager manager) apiKey showId
+    Left error' -> pure $ Left error'
+
+searchShowCandidatesM ::
+  (MonadReader env m, MonadIO m, HasTLSConnectionManager env, HasTMDBAPIKey env) =>
+  ShowTitle ->
+  m (Either String [ShowCandidate])
+searchShowCandidatesM showTitle = do
+  manager <- view tlsConnectionManagerL
+  apiKey <- view tmdbApiKeyL
+
+  liftIO $ searchShowCandidates manager apiKey showTitle
+
+searchShowCandidates :: TLSConnectionManager -> TMDBAPIKey -> ShowTitle -> IO (Either String [ShowCandidate])
+searchShowCandidates (TLSConnectionManager manager) apiKey showTitle = do
+  let request = apiRequest apiKey (SearchShowCandidatesQuery showTitle)
+  body <- responseBody <$> HTTP.httpLbs request manager
+  case JSON.eitherDecode' body of
+    Right ShowSearchResult {results = results'} -> pure $ Right results'
+    Left error' -> pure $ Left error'
+
+getShowM ::
+  (MonadReader env m, MonadIO m, HasTLSConnectionManager env, HasTMDBAPIKey env) =>
+  ShowId ->
+  m (Either String TVShow)
+getShowM showId = do
+  manager <- view tlsConnectionManagerL
+  apiKey <- view tmdbApiKeyL
+
+  liftIO $ getShow manager apiKey showId
+
+getShow :: TLSConnectionManager -> TMDBAPIKey -> ShowId -> IO (Either String TVShow)
+getShow (TLSConnectionManager manager) apiKey showId = do
+  let request = apiRequest apiKey (GetShowQuery showId)
   body <- responseBody <$> HTTP.httpLbs request manager
 
   pure $ JSON.eitherDecode' body
