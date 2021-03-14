@@ -15,6 +15,9 @@ data APIQuery
   = SearchMovieQuery MovieTitle
   | SearchMovieCandidatesQuery MovieTitle
   | GetMovieQuery MovieId
+  | SearchShowQuery ShowTitle
+  | SearchShowCandidatesQuery ShowTitle
+  | GetShowQuery ShowId
   | SearchPersonQuery PersonName
   | GetPersonQuery PersonId
   | GetImageConfigurationData
@@ -113,36 +116,57 @@ instance FromJSON Episode where
 instance ToJSON Episode where
   toJSON value = Aeson.genericToJSON recordOptions value
 
---struct ExternalIds {
---    imdb_id: ?String
---    freebase_mid: ?String
---    freebase_id: ?String
---    tvdb_id: ?U32
---    tvrage_id: ?U32
---}
+data ExternalIds = ExternalIds
+  { imdbId :: Maybe Text,
+    freebaseMid :: Maybe Text,
+    freebaseId :: Maybe Text,
+    tvdbId :: Maybe Int,
+    tvRageId :: Maybe Int
+  }
+  deriving (Eq, Show, Generic)
 
---struct Season {
---    air_date: ?String
---    episode_count: U32
---    season_number: U32
---    id: U64
---    name: String
---    overview: String
---}
---
---struct Show {
---    poster_path: ?String
---    id: U32
---    external_ids: ExternalIds
---    name: String
---    vote_average: F32
---    first_air_date: ?String
---    overview: String
---    credits: Credits
---    next_episode_to_air: ?Episode
---    last_episode_to_air: ?Episode
---    seasons: []Season
---}
+instance FromJSON ExternalIds where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON ExternalIds where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data Season = Season
+  { airDate :: Maybe Text,
+    episodeCount :: Int,
+    seasonNumber :: Int,
+    id :: Integer,
+    name :: Text,
+    overview :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON Season where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON Season where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data TVShow = TVShow
+  { posterPath :: Maybe Text,
+    id :: Int,
+    externalIds :: ExternalIds,
+    name :: ShowTitle,
+    voteAverage :: Float,
+    firstAirDate :: Maybe Text,
+    overview :: Text,
+    credits :: Credits,
+    nextEpisodeToAir :: Maybe Episode,
+    lastEpisodeToAir :: Maybe Episode,
+    seasons :: [Season]
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON TVShow where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON TVShow where
+  toJSON value = Aeson.genericToJSON recordOptions value
 
 data Person = Person
   { popularity :: Float,
@@ -284,8 +308,31 @@ instance FromJSON MovieCandidate where
 instance ToJSON MovieCandidate where
   toJSON value = Aeson.genericToJSON recordOptions value
 
---struct ShowSearchResult {
---    page: U32
---    total_results: U32
---    results: []ShowCandidate
---}
+data ShowCandidate = ShowCandidate
+  { posterPath :: Maybe String,
+    id :: ShowId,
+    name :: Maybe ShowTitle,
+    voteAverage :: Float,
+    firstAirDate :: Maybe Text,
+    overview :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON ShowCandidate where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON ShowCandidate where
+  toJSON value = Aeson.genericToJSON recordOptions value
+
+data ShowSearchResult = ShowSearchResult
+  { page :: Int,
+    totalResults :: Int,
+    results :: [ShowCandidate]
+  }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON ShowSearchResult where
+  parseJSON value = Aeson.genericParseJSON recordOptions value
+
+instance ToJSON ShowSearchResult where
+  toJSON value = Aeson.genericToJSON recordOptions value

@@ -29,6 +29,10 @@ newtype PersonName = PersonName {unPersonName :: Text} deriving (Eq, Show, FromJ
 
 newtype PersonId = PersonId {unPersonId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 
+newtype ShowTitle = ShowTitle {unShowTitle :: Text} deriving (Eq, Show, FromJSON, ToJSON)
+
+newtype ShowId = ShowId {unShowId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
+
 -- | Command line arguments
 newtype Options = Options
   { optionsVerbose :: Bool
@@ -126,6 +130,9 @@ data Command
   | SearchMovie MovieTitle
   | SearchMovieCandidates MovieTitle
   | GetMovie MovieId
+  | SearchShow ShowTitle
+  | SearchShowCandidates ShowTitle
+  | GetShow ShowId
   | SearchPerson PersonName
   deriving (Eq, Show)
 
