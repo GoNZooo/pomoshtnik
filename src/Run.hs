@@ -118,7 +118,7 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = S
   case movieResult of
     Right movie -> do
       ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
-      let embed = movieEmbed imageBaseUrl PosterW185 movie
+      let embed = movieEmbed imageBaseUrl PosterW780 movie
       replyTo channelId' user' Nothing embed
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
 
