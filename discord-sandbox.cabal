@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 547fa212addead17e0b703fa67fd50407975ca4ef300e9e34368804188de8d28
+-- hash: 2f416b0f99bb2cd2c9ee244276394bab7095f2b0d7be1d720c5be2550d004dce
 
 name:           discord-sandbox
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      DiscordSandbox.Database
       DiscordSandbox.Discord
       DiscordSandbox.TMDB
       DiscordSandbox.TMDB.Types
@@ -48,6 +49,11 @@ library
     , http-client
     , http-client-tls
     , inflections
+    , monad-logger
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
     , uuid
@@ -73,7 +79,12 @@ executable discord-sandbox-exe
     , http-client
     , http-client-tls
     , inflections
+    , monad-logger
     , optparse-simple
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
     , uuid
@@ -102,6 +113,11 @@ test-suite discord-sandbox-test
     , http-client
     , http-client-tls
     , inflections
+    , monad-logger
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
     , uuid

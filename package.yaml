@@ -34,6 +34,11 @@ dependencies:
   - http-client
   - http-client-tls
   - unordered-containers
+  - persistent
+  - persistent-sqlite
+  - persistent-template
+  - resource-pool
+  - monad-logger
 
 ghc-options:
   - -Wall

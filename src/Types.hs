@@ -7,7 +7,9 @@ module Types where
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as JSON
 import qualified Data.List as List
+import Data.Pool (Pool)
 import Data.UUID (UUID)
+import Database.Persist.Sql (SqlBackend)
 import Discord (DiscordHandle)
 import Discord.Types (ChannelId, CreateEmbed, Event, User)
 import Network.HTTP.Client (Manager)
@@ -47,7 +49,8 @@ data App = App
     appDiscordHandle :: IORef DiscordHandle,
     appConnectionManager :: !TLSConnectionManager,
     appTmdbApiKey :: !TMDBAPIKey,
-    appTmdbImageConfigurationData :: !ImageConfigurationData
+    appTmdbImageConfigurationData :: !ImageConfigurationData,
+    appSqlPool :: Pool SqlBackend
   }
 
 instance HasLogFunc App where

@@ -3,6 +3,8 @@
 
 module Main (main) where
 
+import qualified Control.Monad.Logger as Logger
+import qualified Database.Persist.Sqlite as Sqlite
 import qualified DiscordSandbox.TMDB as TMDB
 import qualified DiscordSandbox.TMDB.Types as TMDB
 import Import
@@ -39,8 +41,9 @@ main = do
   tmdbImageConfigurationData <-
     either (\error' -> error $ "Unable to get TMDB image configuration data: " <> error') TMDB.images
       <$> TMDB.getImageConfigurationData connectionManager tmdbApiKey
+  pool <- Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
 
-  withLogFunc lo $ \lf ->
+  withLogFunc lo $ \lf -> do
     let app =
           App
             { appLogFunc = lf,
@@ -51,9 +54,10 @@ main = do
               appDiscordHandle = discordHandle,
               appConnectionManager = connectionManager,
               appTmdbApiKey = tmdbApiKey,
-              appTmdbImageConfigurationData = tmdbImageConfigurationData
+              appTmdbImageConfigurationData = tmdbImageConfigurationData,
+              appSqlPool = pool
             }
-     in runRIO app run
+    runRIO app run
 
 initialBotState :: (MonadIO m) => m BotState
 initialBotState = do
