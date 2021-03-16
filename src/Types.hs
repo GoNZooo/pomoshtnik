@@ -143,6 +143,7 @@ data Command
   | SearchShowCandidates ShowTitle
   | GetShow ShowId
   | SearchPerson PersonName
+  | AddNote Text Text
   deriving (Eq, Show)
 
 data OutgoingDiscordEvent

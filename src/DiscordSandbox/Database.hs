@@ -31,14 +31,14 @@ share
       UniqueTitle title
   |]
 
-addNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m (Sqlite.Key Note)
+addNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m (Maybe (Sqlite.Key Note))
 addNoteM note = do
   pool <- view sqlPoolL
 
   liftIO $ addNote pool note
 
-addNote :: Pool SqlBackend -> Note -> IO (Sqlite.Key Note)
-addNote pool note = runPool pool $ Persist.insert note
+addNote :: Pool SqlBackend -> Note -> IO (Maybe (Sqlite.Key Note))
+addNote pool note = runPool pool $ Persist.insertUnique note
 
 addToNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Sqlite.Key Note -> Text -> m (Maybe ())
 addToNoteM key bodyToAdd = do

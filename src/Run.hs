@@ -8,9 +8,11 @@ module Run (run) where
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
+import Database.Persist.Sql (BackendKey (SqlBackendKey))
 import Discord (RunDiscordOpts (..))
 import qualified Discord
 import Discord.Types (CreateEmbed (..), CreateEmbedImage (..), EmbedField (..), Event (..), Message (..), User (..))
+import qualified DiscordSandbox.Database as Database
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
 import qualified DiscordSandbox.TMDB as TMDB
 import DiscordSandbox.TMDB.Types
@@ -149,19 +151,31 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
                 SearchPerson $ PersonName $ Text.intercalate " " rest
             }
       _ -> Nothing
+  | "!add-note " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : title' : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command =
+                AddNote title' $ Text.intercalate " " rest
+            }
+      _ -> Nothing
   | otherwise = Nothing
 decodeCommand _ = Nothing
 
 handleCommand ::
   ( MonadReader env m,
-    MonadIO m,
+    MonadUnliftIO m,
     HasLogFunc env,
     HasActiveTokens env,
     HasAuthenticatedUsers env,
     HasDiscordHandle env,
     HasTMDBAPIKey env,
     HasTLSConnectionManager env,
-    HasTMDBImageConfigurationData env
+    HasTMDBImageConfigurationData env,
+    HasSqlPool env
   ) =>
   IncomingCommand ->
   m ()
@@ -248,6 +262,14 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = S
           replyTo channelId' user' Nothing embed
         Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = AddNote title' body} = do
+  let note = Database.Note {noteTitle = title', noteBody = body}
+  maybeNoteId <- Database.addNoteM note
+  case maybeNoteId of
+    Just (Database.NoteKey (SqlBackendKey noteId)) ->
+      replyTo channelId' user' (Just $ "Note added with ID: " <> tshow noteId) Nothing
+    Nothing ->
+      replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
 
 movieEmbed :: Text -> PosterSize -> Movie -> Maybe CreateEmbed
 movieEmbed

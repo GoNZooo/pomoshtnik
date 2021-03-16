@@ -5,6 +5,7 @@ module Main (main) where
 
 import qualified Control.Monad.Logger as Logger
 import qualified Database.Persist.Sqlite as Sqlite
+import qualified DiscordSandbox.Database as Database
 import qualified DiscordSandbox.TMDB as TMDB
 import qualified DiscordSandbox.TMDB.Types as TMDB
 import Import
@@ -42,6 +43,7 @@ main = do
     either (\error' -> error $ "Unable to get TMDB image configuration data: " <> error') TMDB.images
       <$> TMDB.getImageConfigurationData connectionManager tmdbApiKey
   pool <- Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
+  Sqlite.runSqlPool (Sqlite.runMigration Database.migrateAll) pool
 
   withLogFunc lo $ \lf -> do
     let app =
