@@ -119,6 +119,12 @@ class HasDiscordHandle env where
 instance HasDiscordHandle App where
   discordHandleL = lens appDiscordHandle (\x y -> x {appDiscordHandle = y})
 
+class HasSqlPool env where
+  sqlPoolL :: Lens' env (Pool SqlBackend)
+
+instance HasSqlPool App where
+  sqlPoolL = lens appSqlPool $ \x y -> x {appSqlPool = y}
+
 data BotState = BotState
   { authenticated :: TVar (Set User),
     activeTokens :: TVar (Map User UUID)
