@@ -12,6 +12,7 @@
 
 module DiscordSandbox.Database where
 
+import qualified Control.Monad.Logger as Logger
 import Data.Pool (Pool)
 import Database.Persist (Entity)
 import qualified Database.Persist as Persist
@@ -73,10 +74,13 @@ findNotesByTextM text = do
   liftIO $ findNotesByText pool text
 
 findNotesByText :: Pool SqlBackend -> Text -> IO [Entity Note]
-findNotesByText pool text =
-  Sqlite.runSqlPool
-    (Sqlite.rawSql "SELECT * FROM 'notes' WHERE title ILIKE '%?%' OR body ILIKE '%?%" [Persist.toPersistValue text])
-    pool
+findNotesByText pool text = do
+  let wildcardText = Persist.PersistText $ mconcat ["%", text, "%"]
+
+  runPool pool (Sqlite.rawSql "SELECT ?? FROM 'note' WHERE title LIKE ? OR body LIKE ?" [wildcardText, wildcardText])
 
 runPool :: (MonadUnliftIO m) => Pool SqlBackend -> ReaderT SqlBackend m a -> m a
 runPool = flip Sqlite.runSqlPool
+
+replPool :: IO (Pool SqlBackend)
+replPool = Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
