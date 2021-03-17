@@ -14,7 +14,7 @@ module DiscordSandbox.Database where
 
 import qualified Control.Monad.Logger as Logger
 import Data.Pool (Pool)
-import Database.Persist (Entity)
+import Database.Persist (Entity (..))
 import qualified Database.Persist as Persist
 import Database.Persist.Sqlite (SqlBackend, (=.))
 import qualified Database.Persist.Sqlite as Sqlite
@@ -41,20 +41,20 @@ addNoteM note = do
 addNote :: Pool SqlBackend -> Note -> IO (Maybe (Sqlite.Key Note))
 addNote pool note = runPool pool $ Persist.insertUnique note
 
-addToNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Sqlite.Key Note -> Text -> m (Maybe ())
-addToNoteM key bodyToAdd = do
+addToNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> Text -> m (Maybe ())
+addToNoteM title' bodyToAdd = do
   pool <- view sqlPoolL
 
-  liftIO $ addToNote pool key bodyToAdd
+  liftIO $ addToNote pool title' bodyToAdd
 
-addToNote :: Pool SqlBackend -> Sqlite.Key Note -> Text -> IO (Maybe ())
-addToNote pool key bodyToAdd = runPool pool $ do
-  maybeNote <- Persist.get key
+addToNote :: Pool SqlBackend -> Text -> Text -> IO (Maybe ())
+addToNote pool title' bodyToAdd = runPool pool $ do
+  maybeNote <- Persist.getBy (UniqueTitle title')
 
   case maybeNote of
-    Just note -> do
+    Just (Entity noteId note) -> do
       let oldBody = noteBody note
-      Persist.update key [NoteBody =. oldBody <> "\n" <> bodyToAdd]
+      Persist.update noteId [NoteBody =. oldBody <> "\n\n" <> bodyToAdd]
       pure $ Just ()
     Nothing -> pure Nothing
 

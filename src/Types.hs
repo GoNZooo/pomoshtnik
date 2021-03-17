@@ -144,6 +144,7 @@ data Command
   | GetShow ShowId
   | SearchPerson PersonName
   | AddNote Text Text
+  | AddToNote Text Text
   | FullTextSearchNote Text
   deriving (Eq, Show)
 

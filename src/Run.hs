@@ -174,6 +174,16 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
                 FullTextSearchNote $ Text.intercalate " " rest
             }
       _ -> Nothing
+  | "!add-to-note " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : title' : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command = AddToNote title' $ Text.intercalate " " rest
+            }
+      _ -> Nothing
   | otherwise = Nothing
 decodeCommand _ = Nothing
 
@@ -280,6 +290,13 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = A
   case maybeNoteId of
     Just (Database.NoteKey (SqlBackendKey noteId)) ->
       replyTo channelId' user' (Just $ "Note added with ID: " <> tshow noteId) Nothing
+    Nothing ->
+      replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = AddToNote title' body} = do
+  maybeSuccess <- Database.addToNoteM title' body
+  case maybeSuccess of
+    Just () ->
+      replyTo channelId' user' (Just "Note added to") Nothing
     Nothing ->
       replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = FullTextSearchNote searchText} = do
