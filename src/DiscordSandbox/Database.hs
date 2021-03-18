@@ -67,6 +67,15 @@ removeNoteByTitleM title' = do
 removeNoteByTitle :: Pool SqlBackend -> Text -> IO ()
 removeNoteByTitle pool title = runPool pool $ Persist.deleteBy (UniqueTitle title)
 
+removeNoteByFullTextSearchM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => Text -> m ()
+removeNoteByFullTextSearchM title = do
+  pool <- view sqlPoolL
+
+  liftIO $ removeNoteByFullTextSearch pool title
+
+removeNoteByFullTextSearch :: Pool SqlBackend -> Text -> IO ()
+removeNoteByFullTextSearch pool title = runPool pool $ Persist.deleteWhere [fullTextNoteFilter title]
+
 findNotesByTextM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> m [Entity Note]
 findNotesByTextM text = do
   pool <- view sqlPoolL
@@ -75,11 +84,14 @@ findNotesByTextM text = do
 
 findNotesByText :: Pool SqlBackend -> Text -> IO [Entity Note]
 findNotesByText pool text = do
+  runPool pool $ Persist.selectList [fullTextNoteFilter text] []
+
+fullTextNoteFilter :: Text -> Persist.Filter Note
+fullTextNoteFilter text =
   let wildcardText = Persist.FilterValue $ mconcat ["%", text, "%"]
       titleFilter = Persist.Filter NoteTitle wildcardText $ Persist.BackendSpecificFilter "LIKE"
       bodyFilter = Persist.Filter NoteBody wildcardText $ Persist.BackendSpecificFilter "LIKE"
-
-  runPool pool $ Persist.selectList [Persist.FilterOr [titleFilter, bodyFilter]] []
+   in Persist.FilterOr [titleFilter, bodyFilter]
 
 runPool :: (MonadUnliftIO m) => Pool SqlBackend -> ReaderT SqlBackend m a -> m a
 runPool = flip Sqlite.runSqlPool

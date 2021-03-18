@@ -166,6 +166,16 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
       _ : title' : [] ->
         Just $ IncomingCommand {channelId = channelId', user = author, command = RemoveNoteByTitle title'}
       _ -> Nothing
+  | "!remove-all-notes " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command = RemoveNoteByFullTextSearch (Text.intercalate " " rest)
+            }
+      _ -> Nothing
   | "!search-note " `Text.isPrefixOf` text =
     case Text.split (== ' ') text of
       _ : rest ->
@@ -305,6 +315,9 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = A
 handleCommand IncomingCommand {channelId = channelId', user = user', command = RemoveNoteByTitle title'} = do
   Database.removeNoteByTitleM title'
   replyTo channelId' user' (Just "Note removal completed.") Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = RemoveNoteByFullTextSearch text} = do
+  Database.removeNoteByFullTextSearchM text
+  replyTo channelId' user' (Just "Note removals completed.") Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = FullTextSearchNote searchText} = do
   notes <- Database.findNotesByTextM searchText
   let embed = notesEmbed notes
