@@ -145,6 +145,7 @@ data Command
   | SearchPerson PersonName
   | AddNote Text Text
   | AddToNote Text Text
+  | RemoveNoteByTitle Text
   | FullTextSearchNote Text
   deriving (Eq, Show)
 

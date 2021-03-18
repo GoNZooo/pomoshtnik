@@ -148,8 +148,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                SearchPerson $ PersonName $ Text.intercalate " " rest
+              command = SearchPerson $ PersonName $ Text.intercalate " " rest
             }
       _ -> Nothing
   | "!add-note " `Text.isPrefixOf` text =
@@ -159,9 +158,13 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                AddNote title' $ Text.intercalate " " rest
+              command = AddNote title' $ Text.intercalate " " rest
             }
+      _ -> Nothing
+  | "!remove-note " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : title' : [] ->
+        Just $ IncomingCommand {channelId = channelId', user = author, command = RemoveNoteByTitle title'}
       _ -> Nothing
   | "!search-note " `Text.isPrefixOf` text =
     case Text.split (== ' ') text of
@@ -299,6 +302,9 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = A
       replyTo channelId' user' (Just "Note added to") Nothing
     Nothing ->
       replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = RemoveNoteByTitle title'} = do
+  Database.removeNoteByTitleM title'
+  replyTo channelId' user' (Just "Note removal completed.") Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = FullTextSearchNote searchText} = do
   notes <- Database.findNotesByTextM searchText
   let embed = notesEmbed notes

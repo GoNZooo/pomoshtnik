@@ -58,14 +58,14 @@ addToNote pool title' bodyToAdd = runPool pool $ do
       pure $ Just ()
     Nothing -> pure Nothing
 
-removeNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Sqlite.Key Note -> m ()
-removeNoteM key = do
+removeNoteByTitleM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> m ()
+removeNoteByTitleM title' = do
   pool <- view sqlPoolL
 
-  liftIO $ removeNote pool key
+  liftIO $ removeNoteByTitle pool title'
 
-removeNote :: Pool SqlBackend -> Sqlite.Key Note -> IO ()
-removeNote pool key = runPool pool $ Persist.delete key
+removeNoteByTitle :: Pool SqlBackend -> Text -> IO ()
+removeNoteByTitle pool title = runPool pool $ Persist.deleteBy (UniqueTitle title)
 
 findNotesByTextM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> m [Entity Note]
 findNotesByTextM text = do
