@@ -303,8 +303,13 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = A
   case maybeNoteId of
     Just (Database.NoteKey (SqlBackendKey noteId)) ->
       replyTo channelId' user' (Just $ "Note added with ID: " <> tshow noteId) Nothing
-    Nothing ->
-      replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
+    Nothing -> do
+      maybeAddedToNote <- Database.addToNoteM title' body
+      case maybeAddedToNote of
+        Just () ->
+          replyTo channelId' user' (Just $ "Added to note with title: '" <> title' <> "'") Nothing
+        Nothing ->
+          replyTo channelId' user' (Just $ "Unexpected error, note did not exist when still not found") Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = AddToNote title' body} = do
   maybeSuccess <- Database.addToNoteM title' body
   case maybeSuccess of
