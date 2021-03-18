@@ -75,9 +75,11 @@ findNotesByTextM text = do
 
 findNotesByText :: Pool SqlBackend -> Text -> IO [Entity Note]
 findNotesByText pool text = do
-  let wildcardText = Persist.PersistText $ mconcat ["%", text, "%"]
+  let wildcardText = Persist.FilterValue $ mconcat ["%", text, "%"]
+      titleFilter = Persist.Filter NoteTitle wildcardText $ Persist.BackendSpecificFilter "LIKE"
+      bodyFilter = Persist.Filter NoteBody wildcardText $ Persist.BackendSpecificFilter "LIKE"
 
-  runPool pool (Sqlite.rawSql "SELECT ?? FROM 'note' WHERE title LIKE ? OR body LIKE ?" [wildcardText, wildcardText])
+  runPool pool $ Persist.selectList [Persist.FilterOr [titleFilter, bodyFilter]] []
 
 runPool :: (MonadUnliftIO m) => Pool SqlBackend -> ReaderT SqlBackend m a -> m a
 runPool = flip Sqlite.runSqlPool
