@@ -14,9 +14,9 @@ module DiscordSandbox.Database where
 
 import qualified Control.Monad.Logger as Logger
 import Data.Pool (Pool)
-import Database.Persist (Entity (..))
+import Database.Persist (Entity (..), (=.), (==.))
 import qualified Database.Persist as Persist
-import Database.Persist.Sqlite (SqlBackend, (=.))
+import Database.Persist.Sqlite (SqlBackend)
 import qualified Database.Persist.Sqlite as Sqlite
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import RIO
@@ -75,6 +75,15 @@ removeNoteByFullTextSearchM title = do
 
 removeNoteByFullTextSearch :: Pool SqlBackend -> Text -> IO ()
 removeNoteByFullTextSearch pool title = runPool pool $ Persist.deleteWhere [fullTextNoteFilter title]
+
+updateNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m ()
+updateNoteM note = do
+  pool <- view sqlPoolL
+
+  liftIO $ updateNote pool note
+
+updateNote :: Pool SqlBackend -> Note -> IO ()
+updateNote pool note = runPool pool $ Persist.updateWhere [NoteTitle ==. noteTitle note] [NoteBody =. noteBody note]
 
 findNotesByTextM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> m [Entity Note]
 findNotesByTextM text = do

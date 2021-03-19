@@ -172,6 +172,16 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
               command = RemoveNoteByFullTextSearch (Text.intercalate " " rest)
             }
       _ -> Nothing
+  | "!update-note " `Text.isPrefixOf` text =
+    case Text.split (== ' ') text of
+      _ : title' : rest ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command = UpdateNote title' $ Text.intercalate " " rest
+            }
+      _ -> Nothing
   | "!search-note " `Text.isPrefixOf` text =
     case Text.split (== ' ') text of
       _ : rest ->
@@ -319,6 +329,10 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = R
 handleCommand IncomingCommand {channelId = channelId', user = user', command = RemoveNoteByFullTextSearch text} = do
   Database.removeNoteByFullTextSearchM text
   replyTo channelId' user' (Just "Note removals completed.") Nothing
+handleCommand IncomingCommand {channelId = channelId', user = user', command = UpdateNote title' body} = do
+  let note = Database.Note {noteTitle = title', noteBody = body}
+  Database.updateNoteM note
+  replyTo channelId' user' (Just $ "Note updated.") Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = FullTextSearchNote searchText} = do
   notes <- Database.findNotesByTextM searchText
   let embed = notesEmbed notes

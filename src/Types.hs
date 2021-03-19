@@ -147,6 +147,7 @@ data Command
   | AddToNote Text Text
   | RemoveNoteByTitle Text
   | RemoveNoteByFullTextSearch Text
+  | UpdateNote Text Text
   | FullTextSearchNote Text
   deriving (Eq, Show)
 
