@@ -86,8 +86,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                SearchMovie $ MovieTitle $ Text.intercalate " " rest
+              command = SearchMovie $ MovieTitle $ Text.intercalate " " rest
             }
       _ -> Nothing
   | "!movie-candidates " `Text.isPrefixOf` text =
@@ -97,8 +96,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                SearchMovieCandidates $ MovieTitle $ Text.intercalate " " rest
+              command = SearchMovieCandidates $ MovieTitle $ Text.intercalate " " rest
             }
       _ -> Nothing
   | "!movie-by-id " `Text.isPrefixOf` text =
@@ -117,8 +115,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                SearchShow $ ShowTitle $ Text.intercalate " " rest
+              command = SearchShow $ ShowTitle $ Text.intercalate " " rest
             }
       _ -> Nothing
   | "!show-candidates " `Text.isPrefixOf` text =
@@ -128,8 +125,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                SearchShowCandidates $ ShowTitle $ Text.intercalate " " rest
+              command = SearchShowCandidates $ ShowTitle $ Text.intercalate " " rest
             }
       _ -> Nothing
   | "!show-by-id " `Text.isPrefixOf` text =
