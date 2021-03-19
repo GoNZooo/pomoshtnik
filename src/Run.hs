@@ -415,9 +415,7 @@ movieCandidatesEmbed candidates =
                       embedFieldInline = Nothing
                     }
             )
-   in Discord.def
-        { createEmbedFields = fields
-        }
+   in Discord.def {createEmbedFields = fields}
 
 personEmbed :: Text -> ProfileSize -> PersonCandidate -> Person -> Maybe CreateEmbed
 personEmbed
@@ -579,9 +577,7 @@ showCandidatesEmbed candidates =
                       embedFieldInline = Nothing
                     }
             )
-   in Discord.def
-        { createEmbedFields = fields
-        }
+   in Discord.def {createEmbedFields = fields}
 
 posterUrl :: Text -> PosterSize -> Text -> Text
 posterUrl imageBaseUrl posterSize posterPath' =
