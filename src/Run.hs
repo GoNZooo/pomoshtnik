@@ -73,14 +73,14 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
   | text == "!authenticated" =
     Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
   | "!login " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : token : _ ->
         case UUID.fromText token of
           Just uuid -> Just $ IncomingCommand {channelId = channelId', user = author, command = Login uuid}
           Nothing -> Nothing
       _ -> Nothing
   | "!movie " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -90,7 +90,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!movie-candidates " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -100,7 +100,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!movie-by-id " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         let maybeId = fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
          in case maybeId of
@@ -109,7 +109,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
               Nothing -> Nothing
       _ -> Nothing
   | "!show " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -119,7 +119,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!show-candidates " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -129,7 +129,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!show-by-id " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         let maybeId = fmap ShowId $ readMaybe $ Text.unpack $ Text.concat rest
          in case maybeId of
@@ -138,7 +138,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
               Nothing -> Nothing
       _ -> Nothing
   | "!person " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -148,7 +148,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!add-note " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : title' : rest ->
         Just $
           IncomingCommand
@@ -158,12 +158,12 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!remove-note " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : title' : [] ->
         Just $ IncomingCommand {channelId = channelId', user = author, command = RemoveNoteByTitle title'}
       _ -> Nothing
   | "!remove-all-notes " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -173,7 +173,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!update-note " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : title' : rest ->
         Just $
           IncomingCommand
@@ -183,7 +183,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!search-note " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : rest ->
         Just $
           IncomingCommand
@@ -194,7 +194,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             }
       _ -> Nothing
   | "!add-to-note " `Text.isPrefixOf` text =
-    case Text.split (== ' ') text of
+    case Text.words text of
       _ : title' : rest ->
         Just $
           IncomingCommand
