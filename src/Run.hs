@@ -189,8 +189,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command =
-                FullTextSearchNote $ Text.unwords rest
+              command = FullTextSearchNote $ Text.unwords rest
             }
       _ -> Nothing
   | "!add-to-note " `Text.isPrefixOf` text =
@@ -480,7 +479,7 @@ personEmbed
           Discord.def
             { createEmbedTitle = name',
               createEmbedFields = fields,
-              createEmbedUrl = TMDB.imdbPersonUrl imdbId',
+              createEmbedUrl = maybe "" TMDB.imdbPersonUrl imdbId',
               createEmbedImage = embedImage,
               createEmbedFooterText =
                 "Known for: " <> knownForDepartment' <> "    " <> "Popularity: " <> tshow popularity'

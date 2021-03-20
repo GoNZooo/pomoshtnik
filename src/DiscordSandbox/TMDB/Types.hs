@@ -174,7 +174,7 @@ data Person = Person
     id :: PersonId,
     profilePath :: Maybe Text,
     knownForDepartment :: Text,
-    imdbId :: Text
+    imdbId :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
