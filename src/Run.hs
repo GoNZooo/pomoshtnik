@@ -231,9 +231,7 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = A
   whenM (userIsAuthenticated user') $ do
     authenticatedUsers <- readTVarIO usersReference
     let usersString =
-          Text.intercalate
-            "\n"
-            (Set.elems $ Set.map (\u -> "- " <> userName u <> "#" <> userDiscrim u) authenticatedUsers)
+          Text.unlines (Set.elems $ Set.map (\u -> "- " <> userName u <> "#" <> userDiscrim u) authenticatedUsers)
         messageEmbed =
           Discord.def
             { createEmbedFields =
@@ -381,7 +379,7 @@ movieEmbed
           take maxCastEntries castEntries
             & map
               (\CastEntry {name = name', character = character'} -> mconcat ["**", name', "** as ", character'])
-            & Text.intercalate "\n"
+            & Text.unlines
         titleText = mconcat [title', " (", tshow rating, maybe "" (", " <>) releaseDate', ")"]
         embedImage = fmap (CreateEmbedImageUrl . posterUrl imageBaseUrl posterSize) posterPath'
      in pure $
@@ -543,7 +541,7 @@ showEmbed
           take maxCastEntries castEntries
             & map
               (\CastEntry {name = name', character = character'} -> mconcat ["**", name', "** as ", character'])
-            & Text.intercalate "\n"
+            & Text.unlines
         titleText = mconcat [title', " (", tshow rating, maybe "" (", " <>) firstAirDate', ")"]
         embedImage = fmap (CreateEmbedImageUrl . posterUrl imageBaseUrl posterSize) posterPath'
      in pure $
