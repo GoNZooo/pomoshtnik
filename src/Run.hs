@@ -86,7 +86,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = SearchMovie $ MovieTitle $ Text.intercalate " " rest
+              command = SearchMovie $ MovieTitle $ Text.unwords rest
             }
       _ -> Nothing
   | "!movie-candidates " `Text.isPrefixOf` text =
@@ -96,7 +96,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = SearchMovieCandidates $ MovieTitle $ Text.intercalate " " rest
+              command = SearchMovieCandidates $ MovieTitle $ Text.unwords rest
             }
       _ -> Nothing
   | "!movie-by-id " `Text.isPrefixOf` text =
@@ -115,7 +115,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = SearchShow $ ShowTitle $ Text.intercalate " " rest
+              command = SearchShow $ ShowTitle $ Text.unwords rest
             }
       _ -> Nothing
   | "!show-candidates " `Text.isPrefixOf` text =
@@ -125,7 +125,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = SearchShowCandidates $ ShowTitle $ Text.intercalate " " rest
+              command = SearchShowCandidates $ ShowTitle $ Text.unwords rest
             }
       _ -> Nothing
   | "!show-by-id " `Text.isPrefixOf` text =
@@ -144,7 +144,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = SearchPerson $ PersonName $ Text.intercalate " " rest
+              command = SearchPerson $ PersonName $ Text.unwords rest
             }
       _ -> Nothing
   | "!add-note " `Text.isPrefixOf` text =
@@ -154,7 +154,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = AddNote title' $ Text.intercalate " " rest
+              command = AddNote title' $ Text.unwords rest
             }
       _ -> Nothing
   | "!remove-note " `Text.isPrefixOf` text =
@@ -169,7 +169,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = RemoveNoteByFullTextSearch (Text.intercalate " " rest)
+              command = RemoveNoteByFullTextSearch $ Text.unwords rest
             }
       _ -> Nothing
   | "!update-note " `Text.isPrefixOf` text =
@@ -179,7 +179,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = UpdateNote title' $ Text.intercalate " " rest
+              command = UpdateNote title' $ Text.unwords rest
             }
       _ -> Nothing
   | "!search-note " `Text.isPrefixOf` text =
@@ -190,7 +190,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
             { channelId = channelId',
               user = author,
               command =
-                FullTextSearchNote $ Text.intercalate " " rest
+                FullTextSearchNote $ Text.unwords rest
             }
       _ -> Nothing
   | "!add-to-note " `Text.isPrefixOf` text =
@@ -200,7 +200,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = AddToNote title' $ Text.intercalate " " rest
+              command = AddToNote title' $ Text.unwords rest
             }
       _ -> Nothing
   | otherwise = Nothing
