@@ -37,11 +37,11 @@ share
       deriving Show
       UniqueUserIdTitle userId title
   |]
-  
+
 getOrCreateUserM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => Username -> m (Maybe (Entity User))
 getOrCreateUserM username = do
   pool <- view sqlPoolL
-  
+
   liftIO $ getOrCreateUser pool username
 
 getOrCreateUser :: Pool SqlBackend -> Username -> IO (Maybe (Entity User))
@@ -51,9 +51,9 @@ getOrCreateUser pool username = do
     Just user' -> pure $ Just user'
     Nothing -> do
       runPool pool $ do
-        maybeUserId <- Sql.insertUnique $ User {userUsername = username}
+        maybeUserId <- Persist.insertUnique $ User {userUsername = username}
         case maybeUserId of
-          Just userId -> Sql.getEntity userId
+          Just userId -> Persist.getEntity userId
           Nothing -> pure Nothing
 
 maybeGetUserM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => Username -> m (Maybe (Entity User))
@@ -64,15 +64,15 @@ maybeGetUserM username = do
 
 maybeGetUser :: Pool SqlBackend -> Username -> IO (Maybe (Entity User))
 maybeGetUser pool username = runPool pool $ do
-  Sql.getBy (UniqueUsername username)
+  Persist.getBy (UniqueUsername username)
 
-addNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m (Maybe (Sqlite.Key Note))
+addNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m (Maybe (Persist.Key Note))
 addNoteM note = do
   pool <- view sqlPoolL
 
   liftIO $ addNote pool note
 
-addNote :: Pool SqlBackend -> Note -> IO (Maybe (Sqlite.Key Note))
+addNote :: Pool SqlBackend -> Note -> IO (Maybe (Persist.Key Note))
 addNote pool note = runPool pool $ Persist.insertUnique note
 
 addToNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => UserId -> Text -> Text -> m (Maybe ())
@@ -138,7 +138,7 @@ fullTextNoteFilter text =
    in Persist.FilterOr [titleFilter, bodyFilter]
 
 runPool :: (MonadUnliftIO m) => Pool SqlBackend -> ReaderT SqlBackend m a -> m a
-runPool = flip Sqlite.runSqlPool
+runPool = flip Sql.runSqlPool
 
 replPool :: IO (Pool SqlBackend)
 replPool = Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
