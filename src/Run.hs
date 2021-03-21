@@ -50,8 +50,12 @@ run = do
 
   let runCommandHandler = do
         forever $ do
-          event <- atomically $ decodeCommand <$> readTQueue eventQueue
-          runRIO appState $ maybe mempty handleCommand event
+          maybeEvent <- atomically $ decodeCommand <$> readTQueue eventQueue
+          case maybeEvent of
+            Just event -> do
+              runRIO appState $ handleCommand event
+            Nothing ->
+              mempty
       runDiscordInputThread = do
         liftIO $
           Discord.runDiscord
@@ -300,41 +304,119 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = S
           replyTo channelId' user' Nothing embed
         Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = AddNote title' body} = do
-  let note = Database.Note {noteTitle = title', noteBody = body}
-  maybeNoteId <- Database.addNoteM note
-  case maybeNoteId of
-    Just (Database.NoteKey (SqlBackendKey noteId)) ->
-      replyTo channelId' user' (Just $ "Note added with ID: " <> tshow noteId) Nothing
-    Nothing -> do
-      maybeAddedToNote <- Database.addToNoteM title' body
-      case maybeAddedToNote of
-        Just () ->
-          replyTo channelId' user' (Just $ "Added to note with title: '" <> title' <> "'") Nothing
-        Nothing ->
-          replyTo channelId' user' (Just $ "Unexpected error, note did not exist when still not found") Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = AddToNote title' body} = do
-  maybeSuccess <- Database.addToNoteM title' body
-  case maybeSuccess of
-    Just () ->
-      replyTo channelId' user' (Just "Note added to") Nothing
-    Nothing ->
-      replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = RemoveNoteByTitle title'} = do
-  Database.removeNoteByTitleM title'
-  replyTo channelId' user' (Just "Note removal completed.") Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = RemoveNoteByFullTextSearch text} = do
-  Database.removeNoteByFullTextSearchM text
-  replyTo channelId' user' (Just "Note removals completed.") Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = UpdateNote title' body} = do
-  let note = Database.Note {noteTitle = title', noteBody = body}
-  Database.updateNoteM note
-  replyTo channelId' user' (Just $ "Note updated.") Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = FullTextSearchNote searchText} = do
-  notes <- Database.findNotesByTextM searchText
-  let embed = notesEmbed notes
+handleCommand command'@IncomingCommand {user = user', command = AddNote _ _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = AddToNote _ _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = RemoveNoteByTitle _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = RemoveNoteByFullTextSearch _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = UpdateNote _ _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = FullTextSearchNote _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
 
-  replyTo channelId' user' Nothing (Just embed)
+handleCommandForUser ::
+  ( MonadReader env m,
+    MonadUnliftIO m,
+    HasDiscordHandle env,
+    HasSqlPool env
+  ) =>
+  Maybe (Entity Database.User) ->
+  IncomingCommand ->
+  m ()
+handleCommandForUser Nothing _ = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = GetMovie _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = SearchMovie _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = SearchMovieCandidates _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = GenerateToken} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = AuthenticatedUsers} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = Login _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = SearchPerson _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = GetShow _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = SearchShow _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = SearchShowCandidates _} = pure ()
+handleCommandForUser
+  (Just (Entity userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = AddNote title' body
+    } = do
+    let note = Database.Note {noteTitle = title', noteBody = body, noteUserId = userId'}
+    maybeNoteId <- Database.addNoteM note
+    case maybeNoteId of
+      Just (Database.NoteKey (SqlBackendKey noteId)) ->
+        replyTo channelId' user' (Just $ "Note added with ID: " <> tshow noteId) Nothing
+      Nothing -> do
+        maybeAddedToNote <- Database.addToNoteM userId' title' body
+        case maybeAddedToNote of
+          Just () ->
+            replyTo channelId' user' (Just $ "Added to note with title: '" <> title' <> "'") Nothing
+          Nothing ->
+            replyTo channelId' user' (Just $ "Unexpected error, note did not exist when still not found") Nothing
+handleCommandForUser
+  (Just (Entity userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = AddToNote title' body
+    } = do
+    maybeSuccess <- Database.addToNoteM userId' title' body
+    case maybeSuccess of
+      Just () ->
+        replyTo channelId' user' (Just "Note added to") Nothing
+      Nothing ->
+        replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
+handleCommandForUser
+  (Just (Entity userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = RemoveNoteByTitle title'
+    } = do
+    Database.removeNoteByTitleM userId' title'
+    replyTo channelId' user' (Just "Note removal completed.") Nothing
+handleCommandForUser
+  (Just (Entity userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = RemoveNoteByFullTextSearch text
+    } = do
+    Database.removeNoteByFullTextSearchM userId' text
+    replyTo channelId' user' (Just "Note removals completed.") Nothing
+handleCommandForUser
+  (Just (Entity userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = UpdateNote title' body
+    } = do
+    let note = Database.Note {noteTitle = title', noteBody = body, noteUserId = userId'}
+    Database.updateNoteM note
+    replyTo channelId' user' (Just $ "Note updated.") Nothing
+handleCommandForUser
+  (Just (Entity userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = FullTextSearchNote searchText
+    } = do
+    notes <- Database.findNotesByTextM userId' searchText
+    let embed = notesEmbed notes
+
+    replyTo channelId' user' Nothing (Just embed)
+
+constructUsername :: User -> Text
+constructUsername user' = mconcat [userName user', userDiscrim user']
 
 notesEmbed :: [Entity Database.Note] -> CreateEmbed
 notesEmbed notes =

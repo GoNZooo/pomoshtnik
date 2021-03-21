@@ -18,6 +18,8 @@ import qualified RIO.Char as Char
 import RIO.Process
 import qualified RIO.Text as Text
 import qualified Text.Inflections as Inflections
+import qualified Database.Persist.Sql as Sql
+import qualified Database.Persist as Persist
 
 newtype TLSConnectionManager = TLSConnectionManager Manager
 
@@ -34,6 +36,9 @@ newtype PersonId = PersonId {unPersonId :: Int} deriving (Eq, Show, FromJSON, To
 newtype ShowTitle = ShowTitle {unShowTitle :: Text} deriving (Eq, Show, FromJSON, ToJSON)
 
 newtype ShowId = ShowId {unShowId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
+
+newtype Username = Username Text
+  deriving (Eq, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
 
 -- | Command line arguments
 newtype Options = Options

@@ -16,6 +16,7 @@ import qualified Control.Monad.Logger as Logger
 import Data.Pool (Pool)
 import Database.Persist (Entity (..), (=.), (==.))
 import qualified Database.Persist as Persist
+import qualified Database.Persist.Sql as Sql
 import Database.Persist.Sqlite (SqlBackend)
 import qualified Database.Persist.Sqlite as Sqlite
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
@@ -25,12 +26,45 @@ import Types
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
+  User json
+      username Username
+      deriving Show
+      UniqueUsername username
   Note json
       title Text
       body Text
+      userId UserId
       deriving Show
-      UniqueTitle title
+      UniqueUserIdTitle userId title
   |]
+  
+getOrCreateUserM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => Username -> m (Maybe (Entity User))
+getOrCreateUserM username = do
+  pool <- view sqlPoolL
+  
+  liftIO $ getOrCreateUser pool username
+
+getOrCreateUser :: Pool SqlBackend -> Username -> IO (Maybe (Entity User))
+getOrCreateUser pool username = do
+  maybeUser <- maybeGetUser pool username
+  case maybeUser of
+    Just user' -> pure $ Just user'
+    Nothing -> do
+      runPool pool $ do
+        maybeUserId <- Sql.insertUnique $ User {userUsername = username}
+        case maybeUserId of
+          Just userId -> Sql.getEntity userId
+          Nothing -> pure Nothing
+
+maybeGetUserM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => Username -> m (Maybe (Entity User))
+maybeGetUserM username = do
+  pool <- view sqlPoolL
+
+  liftIO $ maybeGetUser pool username
+
+maybeGetUser :: Pool SqlBackend -> Username -> IO (Maybe (Entity User))
+maybeGetUser pool username = runPool pool $ do
+  Sql.getBy (UniqueUsername username)
 
 addNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m (Maybe (Sqlite.Key Note))
 addNoteM note = do
@@ -41,15 +75,15 @@ addNoteM note = do
 addNote :: Pool SqlBackend -> Note -> IO (Maybe (Sqlite.Key Note))
 addNote pool note = runPool pool $ Persist.insertUnique note
 
-addToNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> Text -> m (Maybe ())
-addToNoteM title' bodyToAdd = do
+addToNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => UserId -> Text -> Text -> m (Maybe ())
+addToNoteM userId title' bodyToAdd = do
   pool <- view sqlPoolL
 
-  liftIO $ addToNote pool title' bodyToAdd
+  liftIO $ addToNote pool userId title' bodyToAdd
 
-addToNote :: Pool SqlBackend -> Text -> Text -> IO (Maybe ())
-addToNote pool title' bodyToAdd = runPool pool $ do
-  maybeNote <- Persist.getBy (UniqueTitle title')
+addToNote :: Pool SqlBackend -> UserId -> Text -> Text -> IO (Maybe ())
+addToNote pool userId title' bodyToAdd = runPool pool $ do
+  maybeNote <- Persist.getBy (UniqueUserIdTitle userId title')
 
   case maybeNote of
     Just (Entity noteId note) -> do
@@ -58,23 +92,24 @@ addToNote pool title' bodyToAdd = runPool pool $ do
       pure $ Just ()
     Nothing -> pure Nothing
 
-removeNoteByTitleM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> m ()
-removeNoteByTitleM title' = do
+removeNoteByTitleM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => UserId -> Text -> m ()
+removeNoteByTitleM userId title' = do
   pool <- view sqlPoolL
 
-  liftIO $ removeNoteByTitle pool title'
+  liftIO $ removeNoteByTitle pool userId title'
 
-removeNoteByTitle :: Pool SqlBackend -> Text -> IO ()
-removeNoteByTitle pool title = runPool pool $ Persist.deleteBy (UniqueTitle title)
+removeNoteByTitle :: Pool SqlBackend -> UserId -> Text -> IO ()
+removeNoteByTitle pool userId title = runPool pool $ Persist.deleteBy (UniqueUserIdTitle userId title)
 
-removeNoteByFullTextSearchM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => Text -> m ()
-removeNoteByFullTextSearchM title = do
+removeNoteByFullTextSearchM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => UserId -> Text -> m ()
+removeNoteByFullTextSearchM userId title = do
   pool <- view sqlPoolL
 
-  liftIO $ removeNoteByFullTextSearch pool title
+  liftIO $ removeNoteByFullTextSearch pool userId title
 
-removeNoteByFullTextSearch :: Pool SqlBackend -> Text -> IO ()
-removeNoteByFullTextSearch pool title = runPool pool $ Persist.deleteWhere [fullTextNoteFilter title]
+removeNoteByFullTextSearch :: Pool SqlBackend -> UserId -> Text -> IO ()
+removeNoteByFullTextSearch pool userId title =
+  runPool pool $ Persist.deleteWhere [NoteUserId ==. userId, fullTextNoteFilter title]
 
 updateNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m ()
 updateNoteM note = do
@@ -85,15 +120,15 @@ updateNoteM note = do
 updateNote :: Pool SqlBackend -> Note -> IO ()
 updateNote pool note = runPool pool $ Persist.updateWhere [NoteTitle ==. noteTitle note] [NoteBody =. noteBody note]
 
-findNotesByTextM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Text -> m [Entity Note]
-findNotesByTextM text = do
+findNotesByTextM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => UserId -> Text -> m [Entity Note]
+findNotesByTextM userId text = do
   pool <- view sqlPoolL
 
-  liftIO $ findNotesByText pool text
+  liftIO $ findNotesByText pool userId text
 
-findNotesByText :: Pool SqlBackend -> Text -> IO [Entity Note]
-findNotesByText pool text = do
-  runPool pool $ Persist.selectList [fullTextNoteFilter text] []
+findNotesByText :: Pool SqlBackend -> UserId -> Text -> IO [Entity Note]
+findNotesByText pool userId text = do
+  runPool pool $ Persist.selectList [NoteUserId ==. userId, fullTextNoteFilter text] []
 
 fullTextNoteFilter :: Text -> Persist.Filter Note
 fullTextNoteFilter text =
