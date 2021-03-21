@@ -44,6 +44,7 @@ main = do
       <$> TMDB.getImageConfigurationData connectionManager tmdbApiKey
   pool <- Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
   Sqlite.runSqlPool (Sqlite.runMigration Database.migrateAll) pool
+  notesInProgress <- newTVarIO mempty
 
   withLogFunc lo $ \lf -> do
     let app =
@@ -57,7 +58,8 @@ main = do
               appConnectionManager = connectionManager,
               appTmdbApiKey = tmdbApiKey,
               appTmdbImageConfigurationData = tmdbImageConfigurationData,
-              appSqlPool = pool
+              appSqlPool = pool,
+              appNotesInProgress = notesInProgress
             }
     runRIO app run
 

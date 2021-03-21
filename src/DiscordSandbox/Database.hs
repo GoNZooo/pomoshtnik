@@ -99,17 +99,17 @@ removeNoteByTitleM userId title' = do
   liftIO $ removeNoteByTitle pool userId title'
 
 removeNoteByTitle :: Pool SqlBackend -> UserId -> Text -> IO ()
-removeNoteByTitle pool userId title = runPool pool $ Persist.deleteBy (UniqueUserIdTitle userId title)
+removeNoteByTitle pool userId title' = runPool pool $ Persist.deleteBy (UniqueUserIdTitle userId title')
 
 removeNoteByFullTextSearchM :: (MonadReader env m, MonadUnliftIO m, HasSqlPool env) => UserId -> Text -> m ()
-removeNoteByFullTextSearchM userId title = do
+removeNoteByFullTextSearchM userId title' = do
   pool <- view sqlPoolL
 
-  liftIO $ removeNoteByFullTextSearch pool userId title
+  liftIO $ removeNoteByFullTextSearch pool userId title'
 
 removeNoteByFullTextSearch :: Pool SqlBackend -> UserId -> Text -> IO ()
-removeNoteByFullTextSearch pool userId title =
-  runPool pool $ Persist.deleteWhere [NoteUserId ==. userId, fullTextNoteFilter title]
+removeNoteByFullTextSearch pool userId title' =
+  runPool pool $ Persist.deleteWhere [NoteUserId ==. userId, fullTextNoteFilter title']
 
 updateNoteM :: (MonadUnliftIO m, MonadReader env m, HasSqlPool env) => Note -> m ()
 updateNoteM note = do

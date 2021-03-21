@@ -35,6 +35,7 @@ import DiscordSandbox.Web (WebBase (..))
 import Import
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified RIO.Map as Map
+import qualified RIO.Partial as Partial
 import qualified RIO.Set as Set
 import qualified RIO.Text as Text
 import qualified System.Environment as Environment
@@ -206,6 +207,23 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
               command = AddToNote title' $ Text.unwords rest
             }
       _ -> Nothing
+  | "!start-note " `Text.isPrefixOf` text =
+    case Text.words text of
+      _ : title' : _ ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command = StartNote (Username $ constructUsername author) title'
+            }
+      _ -> Nothing
+  | "!finish-note" == text =
+    Just $
+      IncomingCommand
+        { channelId = channelId',
+          user = author,
+          command = FinishNote (Username $ constructUsername author)
+        }
   | otherwise = Nothing
 decodeCommand _ = Nothing
 
@@ -219,7 +237,8 @@ handleCommand ::
     HasTMDBAPIKey env,
     HasTLSConnectionManager env,
     HasTMDBImageConfigurationData env,
-    HasSqlPool env
+    HasSqlPool env,
+    HasNotesInProgress env
   ) =>
   IncomingCommand ->
   m ()
@@ -322,12 +341,19 @@ handleCommand command'@IncomingCommand {user = user', command = UpdateNote _ _} 
 handleCommand command'@IncomingCommand {user = user', command = FullTextSearchNote _} = do
   maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
   handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = StartNote _ _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
+handleCommand command'@IncomingCommand {user = user', command = FinishNote _} = do
+  maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
+  handleCommandForUser maybeUser command'
 
 handleCommandForUser ::
   ( MonadReader env m,
     MonadUnliftIO m,
     HasDiscordHandle env,
-    HasSqlPool env
+    HasSqlPool env,
+    HasNotesInProgress env
   ) =>
   Maybe (Entity Database.User) ->
   IncomingCommand ->
@@ -414,6 +440,55 @@ handleCommandForUser
     let embed = notesEmbed notes
 
     replyTo channelId' user' Nothing (Just embed)
+handleCommandForUser
+  (Just (Entity _userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = StartNote username title'
+    } = do
+    startNote username title'
+    replyTo channelId' user' (Just $ "Started note with title '" <> title' <> "'.") Nothing
+handleCommandForUser
+  (Just (Entity _userId' _))
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = FinishNote username
+    } = do
+    finishNote username
+    replyTo channelId' user' (Just "Finished note") Nothing
+
+startNote :: (MonadReader env m, MonadUnliftIO m, HasNotesInProgress env) => Username -> Text -> m ()
+startNote username title' = do
+  notesInProgressReference <- view notesInProgressL
+  let note = InProgressNote {title = title', entries = []}
+  liftIO $
+    atomically $ do
+      notesInProgress <- readTVar notesInProgressReference
+      case Map.lookup username notesInProgress of
+        Just reference ->
+          writeTVar reference note
+        Nothing -> do
+          reference <- newTVar note
+          writeTVar notesInProgressReference $ Map.insert username reference notesInProgress
+
+finishNote :: (MonadReader env m, MonadUnliftIO m, HasNotesInProgress env, HasSqlPool env) => Username -> m ()
+finishNote username = do
+  notesInProgressReference <- view notesInProgressL
+  finishedNote <- liftIO $
+    atomically $ do
+      notesInProgress <- readTVar notesInProgressReference
+      case Map.lookup username notesInProgress of
+        Just reference -> Just <$> readTVar reference
+        Nothing -> pure Nothing
+  case finishedNote of
+    Just InProgressNote {title = title', entries = entries'} -> do
+      userId' <- Database.getOrCreateUserM username
+      let body = mconcat entries'
+          note' = Database.Note {noteTitle = title', noteBody = body, noteUserId = Partial.fromJust userId' & entityKey}
+      void $ Database.addNoteM note'
+    Nothing -> pure ()
 
 constructUsername :: User -> Text
 constructUsername user' = mconcat [userName user', userDiscrim user']

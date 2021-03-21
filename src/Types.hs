@@ -9,7 +9,9 @@ import qualified Data.Aeson as JSON
 import qualified Data.List as List
 import Data.Pool (Pool)
 import Data.UUID (UUID)
+import qualified Database.Persist as Persist
 import Database.Persist.Sql (SqlBackend)
+import qualified Database.Persist.Sql as Sql
 import Discord (DiscordHandle)
 import Discord.Types (ChannelId, CreateEmbed, Event, User)
 import Network.HTTP.Client (Manager)
@@ -18,8 +20,6 @@ import qualified RIO.Char as Char
 import RIO.Process
 import qualified RIO.Text as Text
 import qualified Text.Inflections as Inflections
-import qualified Database.Persist.Sql as Sql
-import qualified Database.Persist as Persist
 
 newtype TLSConnectionManager = TLSConnectionManager Manager
 
@@ -38,7 +38,12 @@ newtype ShowTitle = ShowTitle {unShowTitle :: Text} deriving (Eq, Show, FromJSON
 newtype ShowId = ShowId {unShowId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 
 newtype Username = Username Text
-  deriving (Eq, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
+  deriving (Eq, Ord, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
+
+data InProgressNote = InProgressNote
+  { title :: !Text,
+    entries :: [Text]
+  }
 
 -- | Command line arguments
 newtype Options = Options
@@ -55,7 +60,8 @@ data App = App
     appConnectionManager :: !TLSConnectionManager,
     appTmdbApiKey :: !TMDBAPIKey,
     appTmdbImageConfigurationData :: !ImageConfigurationData,
-    appSqlPool :: Pool SqlBackend
+    appSqlPool :: Pool SqlBackend,
+    appNotesInProgress :: TVar (Map Username (TVar InProgressNote))
   }
 
 instance HasLogFunc App where
@@ -130,6 +136,12 @@ class HasSqlPool env where
 instance HasSqlPool App where
   sqlPoolL = lens appSqlPool $ \x y -> x {appSqlPool = y}
 
+class HasNotesInProgress env where
+  notesInProgressL :: Lens' env (TVar (Map Username (TVar InProgressNote)))
+
+instance HasNotesInProgress App where
+  notesInProgressL = lens appNotesInProgress $ \x y -> x {appNotesInProgress = y}
+
 data BotState = BotState
   { authenticated :: TVar (Set User),
     activeTokens :: TVar (Map User UUID)
@@ -153,6 +165,8 @@ data Command
   | RemoveNoteByTitle Text
   | RemoveNoteByFullTextSearch Text
   | UpdateNote Text Text
+  | StartNote Username Text
+  | FinishNote Username
   | FullTextSearchNote Text
   deriving (Eq, Show)
 
