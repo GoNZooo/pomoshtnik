@@ -1,0 +1,6 @@
+cradle:
+  stack:
+    - path: src
+      component: discord-sandbox:lib
+    - path: app
+      component: discord-sandbox:exe:discord-sandbox-exe
