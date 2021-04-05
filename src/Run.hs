@@ -15,6 +15,7 @@ import qualified Discord
 import Discord.Types (CreateEmbed (..), CreateEmbedImage (..), EmbedField (..), Event (..), Message (..), User (..))
 import qualified DiscordSandbox.Database as Database
 import DiscordSandbox.Discord (onEvent, onStart, replyTo)
+import qualified DiscordSandbox.SevernataZvezda as SevernataZvezda
 import qualified DiscordSandbox.TMDB as TMDB
 import DiscordSandbox.TMDB.Types
   ( CastEntry (..),
@@ -224,6 +225,16 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           user = author,
           command = FinishNote (Username $ constructUsername author)
         }
+  | "!authenticate-external " `Text.isPrefixOf` text =
+    case Text.words text of
+      _ : username' : challengeText : _ ->
+        Just $
+          IncomingCommand
+            { channelId = channelId',
+              user = author,
+              command = AuthenticateExternal (Username username') $ AuthenticationChallenge challengeText
+            }
+      _ -> Nothing
   | otherwise = Nothing
 decodeCommand _ = Nothing
 
@@ -238,7 +249,8 @@ handleCommand ::
     HasTLSConnectionManager env,
     HasTMDBImageConfigurationData env,
     HasSqlPool env,
-    HasNotesInProgress env
+    HasNotesInProgress env,
+    HasExternalAuthenticationUrl env
   ) =>
   IncomingCommand ->
   m ()
@@ -323,6 +335,17 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = S
           replyTo channelId' user' Nothing embed
         Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command = AuthenticateExternal username challenge
+    } = do
+    authenticationResult <-
+      SevernataZvezda.authenticateChallengeM username challenge (Username $ constructUsername user')
+    case authenticationResult of
+      Just () -> replyTo channelId' user' (Just $ "Server responded successfully.") Nothing
+      Nothing -> replyTo channelId' user' (Just $ "Server responded with error.") Nothing
 handleCommand command'@IncomingCommand {user = user', command = AddNote _ _} = do
   maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user'
   handleCommandForUser maybeUser command'
@@ -369,6 +392,7 @@ handleCommandForUser (Just _) IncomingCommand {command = SearchPerson _} = pure 
 handleCommandForUser (Just _) IncomingCommand {command = GetShow _} = pure ()
 handleCommandForUser (Just _) IncomingCommand {command = SearchShow _} = pure ()
 handleCommandForUser (Just _) IncomingCommand {command = SearchShowCandidates _} = pure ()
+handleCommandForUser (Just _) IncomingCommand {command = AuthenticateExternal _ _} = pure ()
 handleCommandForUser
   (Just (Entity userId' _))
   IncomingCommand
@@ -491,7 +515,7 @@ finishNote username = do
     Nothing -> pure ()
 
 constructUsername :: User -> Text
-constructUsername user' = mconcat [userName user', userDiscrim user']
+constructUsername user' = mconcat [userName user', "#", userDiscrim user']
 
 notesEmbed :: [Entity Database.Note] -> CreateEmbed
 notesEmbed notes =

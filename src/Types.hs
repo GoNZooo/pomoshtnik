@@ -40,6 +40,12 @@ newtype ShowId = ShowId {unShowId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 newtype Username = Username Text
   deriving (Eq, Ord, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
 
+newtype AuthenticationChallenge = AuthenticationChallenge Text
+  deriving (Eq, Show, FromJSON, ToJSON)
+
+newtype ExternalAuthenticationUrl = ExternalAuthenticationUrl String
+  deriving (Eq, Show, FromJSON, ToJSON)
+
 data InProgressNote = InProgressNote
   { title :: !Text,
     entries :: [Text]
@@ -61,7 +67,8 @@ data App = App
     appTmdbApiKey :: !TMDBAPIKey,
     appTmdbImageConfigurationData :: !ImageConfigurationData,
     appSqlPool :: Pool SqlBackend,
-    appNotesInProgress :: TVar (Map Username (TVar InProgressNote))
+    appNotesInProgress :: TVar (Map Username (TVar InProgressNote)),
+    appExternalAuthenticationUrl :: !ExternalAuthenticationUrl
   }
 
 instance HasLogFunc App where
@@ -142,6 +149,13 @@ class HasNotesInProgress env where
 instance HasNotesInProgress App where
   notesInProgressL = lens appNotesInProgress $ \x y -> x {appNotesInProgress = y}
 
+class HasExternalAuthenticationUrl env where
+  externalAuthenticationUrlL :: Lens' env ExternalAuthenticationUrl
+
+instance HasExternalAuthenticationUrl App where
+  externalAuthenticationUrlL =
+    lens appExternalAuthenticationUrl $ \x y -> x {appExternalAuthenticationUrl = y}
+
 data BotState = BotState
   { authenticated :: TVar (Set User),
     activeTokens :: TVar (Map User UUID)
@@ -168,6 +182,7 @@ data Command
   | StartNote Username Text
   | FinishNote Username
   | FullTextSearchNote Text
+  | AuthenticateExternal Username AuthenticationChallenge
   deriving (Eq, Show)
 
 data OutgoingDiscordEvent

@@ -33,6 +33,7 @@ dependencies:
   - inflections
   - http-client
   - http-client-tls
+  - http-types
   - unordered-containers
   - persistent
   - persistent-sqlite

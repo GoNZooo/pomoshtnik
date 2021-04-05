@@ -42,6 +42,8 @@ main = do
   tmdbImageConfigurationData <-
     either (\error' -> error $ "Unable to get TMDB image configuration data: " <> error') TMDB.images
       <$> TMDB.getImageConfigurationData connectionManager tmdbApiKey
+  externalAuthenticationUrl <-
+    ExternalAuthenticationUrl <$> Environment.getEnv "EXTERNAL_AUTHENTICATION_URL"
   pool <- Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
   Sqlite.runSqlPool (Sqlite.runMigration Database.migrateAll) pool
   notesInProgress <- newTVarIO mempty
@@ -59,7 +61,8 @@ main = do
               appTmdbApiKey = tmdbApiKey,
               appTmdbImageConfigurationData = tmdbImageConfigurationData,
               appSqlPool = pool,
-              appNotesInProgress = notesInProgress
+              appNotesInProgress = notesInProgress,
+              appExternalAuthenticationUrl = externalAuthenticationUrl
             }
     runRIO app run
 
