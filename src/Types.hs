@@ -46,6 +46,9 @@ newtype AuthenticationChallenge = AuthenticationChallenge Text
 newtype ExternalAuthenticationUrl = ExternalAuthenticationUrl String
   deriving (Eq, Show, FromJSON, ToJSON)
 
+newtype ExternalAuthenticationToken = ExternalAuthenticationToken Text
+  deriving (Eq, Show, FromJSON, ToJSON)
+
 data InProgressNote = InProgressNote
   { title :: !Text,
     entries :: [Text]
@@ -68,7 +71,8 @@ data App = App
     appTmdbImageConfigurationData :: !ImageConfigurationData,
     appSqlPool :: Pool SqlBackend,
     appNotesInProgress :: TVar (Map Username (TVar InProgressNote)),
-    appExternalAuthenticationUrl :: !ExternalAuthenticationUrl
+    appExternalAuthenticationUrl :: !ExternalAuthenticationUrl,
+    appExternalAuthenticationToken :: !ExternalAuthenticationToken
   }
 
 instance HasLogFunc App where
@@ -155,6 +159,13 @@ class HasExternalAuthenticationUrl env where
 instance HasExternalAuthenticationUrl App where
   externalAuthenticationUrlL =
     lens appExternalAuthenticationUrl $ \x y -> x {appExternalAuthenticationUrl = y}
+
+class HasExternalAuthenticationToken env where
+  externalAuthenticationTokenL :: Lens' env ExternalAuthenticationToken
+
+instance HasExternalAuthenticationToken App where
+  externalAuthenticationTokenL =
+    lens appExternalAuthenticationToken $ \x y -> x {appExternalAuthenticationToken = y}
 
 data BotState = BotState
   { authenticated :: TVar (Set User),

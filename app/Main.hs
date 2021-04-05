@@ -44,6 +44,8 @@ main = do
       <$> TMDB.getImageConfigurationData connectionManager tmdbApiKey
   externalAuthenticationUrl <-
     ExternalAuthenticationUrl <$> Environment.getEnv "EXTERNAL_AUTHENTICATION_URL"
+  externalAuthenticationToken <-
+    ExternalAuthenticationToken . fromString <$> Environment.getEnv "EXTERNAL_AUTHENTICATION_TOKEN"
   pool <- Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
   Sqlite.runSqlPool (Sqlite.runMigration Database.migrateAll) pool
   notesInProgress <- newTVarIO mempty
@@ -62,7 +64,8 @@ main = do
               appTmdbImageConfigurationData = tmdbImageConfigurationData,
               appSqlPool = pool,
               appNotesInProgress = notesInProgress,
-              appExternalAuthenticationUrl = externalAuthenticationUrl
+              appExternalAuthenticationUrl = externalAuthenticationUrl,
+              appExternalAuthenticationToken = externalAuthenticationToken
             }
     runRIO app run
 

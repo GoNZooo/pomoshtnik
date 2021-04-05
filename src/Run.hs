@@ -250,7 +250,8 @@ handleCommand ::
     HasTMDBImageConfigurationData env,
     HasSqlPool env,
     HasNotesInProgress env,
-    HasExternalAuthenticationUrl env
+    HasExternalAuthenticationUrl env,
+    HasExternalAuthenticationToken env
   ) =>
   IncomingCommand ->
   m ()
@@ -342,7 +343,10 @@ handleCommand
       command = AuthenticateExternal username challenge
     } = do
     authenticationResult <-
-      SevernataZvezda.authenticateChallengeM username challenge (Username $ constructUsername user')
+      SevernataZvezda.authenticateChallengeM
+        username
+        challenge
+        (Username $ constructUsername user')
     case authenticationResult of
       Just () -> replyTo channelId' user' (Just $ "Server responded successfully.") Nothing
       Nothing -> replyTo channelId' user' (Just $ "Server responded with error.") Nothing
