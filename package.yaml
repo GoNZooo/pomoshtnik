@@ -1,14 +1,13 @@
-name: discord-sandbox
+name: pomoshtnik
 version: 0.1.0.0
-github: githubuser/discord-sandbox
+github: GoNZooo/pomoshtnik
 license: BSD3
-author: Author name here
-maintainer: example@example.com
-copyright: 2021 Author name here
+author: Rickard Andersson
+maintainer: gonz@severnatazvezda.com
+copyright: 2021 Rickard Andersson
 
 extra-source-files:
   - README.md
-  - ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -54,11 +53,11 @@ library:
   source-dirs: src
 
 executables:
-  discord-sandbox-exe:
+  pomoshtnik-exe:
     main: Main.hs
     source-dirs: app
     dependencies:
-      - discord-sandbox
+      - pomoshtnik
       - optparse-simple
 
     ghc-options:
@@ -67,11 +66,11 @@ executables:
       - -with-rtsopts=-N
 
 tests:
-  discord-sandbox-test:
+  pomoshtnik-test:
     main: Spec.hs
     source-dirs: test
     dependencies:
-      - discord-sandbox
+      - pomoshtnik
       - hspec
 
     ghc-options:

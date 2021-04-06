@@ -1,6 +1,6 @@
 cradle:
   stack:
     - path: src
-      component: discord-sandbox:lib
+      component: pomoshtnik:lib
     - path: app
-      component: discord-sandbox:exe:discord-sandbox-exe
+      component: pomoshtnik:exe:pomoshtnik-exe

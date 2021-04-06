@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module DiscordSandbox.Web where
+module Pomoshtnik.Web where
 
 import Discord.Types (User (..))
 import RIO hiding (Handler)

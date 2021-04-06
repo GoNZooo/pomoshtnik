@@ -2,11 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module DiscordSandbox.TMDB where
+module Pomoshtnik.TMDB where
 
 import qualified Data.Aeson as JSON
-import DiscordSandbox.TMDB.Types
 import Network.HTTP.Client as HTTP
+import Pomoshtnik.TMDB.Types
 import RIO
 import Types
 

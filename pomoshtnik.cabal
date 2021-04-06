@@ -4,41 +4,40 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 38c6b46151b8cc9d33e2723e2b531a2b2366d52cee707e04942463acd79e8147
+-- hash: cb3ba55c30faa31fef27d56411a9fca45fa475b18c42890089b891c5f63917b3
 
-name:           discord-sandbox
+name:           pomoshtnik
 version:        0.1.0.0
 description:    Please see the README on Github at <https://github.com/githubuser/discord-sandbox#readme>
-homepage:       https://github.com/githubuser/discord-sandbox#readme
-bug-reports:    https://github.com/githubuser/discord-sandbox/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2021 Author name here
+homepage:       https://github.com/GoNZooo/pomoshtnik#readme
+bug-reports:    https://github.com/GoNZooo/pomoshtnik/issues
+author:         Rickard Andersson
+maintainer:     gonz@severnatazvezda.com
+copyright:      2021 Rickard Andersson
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/discord-sandbox
+  location: https://github.com/GoNZooo/pomoshtnik
 
 library
   exposed-modules:
-      DiscordSandbox.Database
-      DiscordSandbox.Discord
-      DiscordSandbox.SevernataZvezda
-      DiscordSandbox.TMDB
-      DiscordSandbox.TMDB.Types
-      DiscordSandbox.Web
       Import
+      Pomoshtnik.Database
+      Pomoshtnik.Discord
+      Pomoshtnik.SevernataZvezda
+      Pomoshtnik.TMDB
+      Pomoshtnik.TMDB.Types
+      Pomoshtnik.Web
       Run
       Types
       Util
   other-modules:
-      Paths_discord_sandbox
+      Paths_pomoshtnik
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
@@ -65,10 +64,10 @@ library
     , yesod-form
   default-language: Haskell2010
 
-executable discord-sandbox-exe
+executable pomoshtnik-exe
   main-is: Main.hs
   other-modules:
-      Paths_discord_sandbox
+      Paths_pomoshtnik
   hs-source-dirs:
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
@@ -76,7 +75,6 @@ executable discord-sandbox-exe
       aeson
     , base >=4.11 && <10
     , discord-haskell
-    , discord-sandbox
     , emoji
     , http-client
     , http-client-tls
@@ -87,6 +85,7 @@ executable discord-sandbox-exe
     , persistent
     , persistent-sqlite
     , persistent-template
+    , pomoshtnik
     , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
@@ -97,12 +96,12 @@ executable discord-sandbox-exe
     , yesod-form
   default-language: Haskell2010
 
-test-suite discord-sandbox-test
+test-suite pomoshtnik-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
       UtilSpec
-      Paths_discord_sandbox
+      Paths_pomoshtnik
   hs-source-dirs:
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
@@ -110,7 +109,6 @@ test-suite discord-sandbox-test
       aeson
     , base >=4.11 && <10
     , discord-haskell
-    , discord-sandbox
     , emoji
     , hspec
     , http-client
@@ -121,6 +119,7 @@ test-suite discord-sandbox-test
     , persistent
     , persistent-sqlite
     , persistent-template
+    , pomoshtnik
     , resource-pool
     , rio >=0.1.12.0
     , unordered-containers

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module DiscordSandbox.SevernataZvezda where
+module Pomoshtnik.SevernataZvezda where
 
 import Data.Aeson (encode, object, (.=))
 import Network.HTTP.Client as HTTP

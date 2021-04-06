@@ -13,11 +13,13 @@ import Database.Persist.Sql (BackendKey (SqlBackendKey))
 import Discord (RunDiscordOpts (..))
 import qualified Discord
 import Discord.Types (CreateEmbed (..), CreateEmbedImage (..), EmbedField (..), Event (..), Message (..), User (..))
-import qualified DiscordSandbox.Database as Database
-import DiscordSandbox.Discord (onEvent, onStart, replyTo)
-import qualified DiscordSandbox.SevernataZvezda as SevernataZvezda
-import qualified DiscordSandbox.TMDB as TMDB
-import DiscordSandbox.TMDB.Types
+import Import
+import qualified Network.Wai.Handler.Warp as Warp
+import qualified Pomoshtnik.Database as Database
+import Pomoshtnik.Discord (onEvent, onStart, replyTo)
+import qualified Pomoshtnik.SevernataZvezda as SevernataZvezda
+import qualified Pomoshtnik.TMDB as TMDB
+import Pomoshtnik.TMDB.Types
   ( CastEntry (..),
     Credits (..),
     Episode (..),
@@ -32,9 +34,7 @@ import DiscordSandbox.TMDB.Types
     ShowCandidate (..),
     TVShow (..),
   )
-import DiscordSandbox.Web (WebBase (..))
-import Import
-import qualified Network.Wai.Handler.Warp as Warp
+import Pomoshtnik.Web (WebBase (..))
 import qualified RIO.Map as Map
 import qualified RIO.Partial as Partial
 import qualified RIO.Set as Set

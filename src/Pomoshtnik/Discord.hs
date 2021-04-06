@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module DiscordSandbox.Discord
+module Pomoshtnik.Discord
   ( onEvent,
     onStart,
     replyTo,

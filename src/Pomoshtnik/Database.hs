@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module DiscordSandbox.Database where
+module Pomoshtnik.Database where
 
 import qualified Control.Monad.Logger as Logger
 import Data.Pool (Pool)

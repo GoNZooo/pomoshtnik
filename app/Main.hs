@@ -5,13 +5,13 @@ module Main (main) where
 
 import qualified Control.Monad.Logger as Logger
 import qualified Database.Persist.Sqlite as Sqlite
-import qualified DiscordSandbox.Database as Database
-import qualified DiscordSandbox.TMDB as TMDB
-import qualified DiscordSandbox.TMDB.Types as TMDB
 import Import
 import Network.HTTP.Client.TLS (newTlsManager)
 import Options.Applicative.Simple
-import qualified Paths_discord_sandbox
+import qualified Paths_pomoshtnik
+import qualified Pomoshtnik.Database as Database
+import qualified Pomoshtnik.TMDB as TMDB
+import qualified Pomoshtnik.TMDB.Types as TMDB
 import RIO.Process
 import Run
 import qualified System.Environment as Environment
@@ -20,7 +20,7 @@ main :: IO ()
 main = do
   (options, ()) <-
     simpleOptions
-      $(simpleVersion Paths_discord_sandbox.version)
+      $(simpleVersion Paths_pomoshtnik.version)
       "Header for command line arguments"
       "Program description, also for command line arguments"
       ( Options

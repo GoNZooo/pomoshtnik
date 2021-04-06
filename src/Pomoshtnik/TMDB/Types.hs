@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module DiscordSandbox.TMDB.Types where
+module Pomoshtnik.TMDB.Types where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
