@@ -232,7 +232,9 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
           IncomingCommand
             { channelId = channelId',
               user = author,
-              command = AuthenticateExternal (Username username') $ AuthenticationChallenge challengeText
+              command =
+                AuthenticateExternal (AuthenticationUsername username') $
+                  AuthenticationChallenge challengeText
             }
       _ -> Nothing
   | otherwise = Nothing

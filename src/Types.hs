@@ -40,6 +40,9 @@ newtype ShowId = ShowId {unShowId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 newtype Username = Username Text
   deriving (Eq, Ord, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
 
+newtype AuthenticationUsername = AuthenticationUsername Text
+  deriving (Eq, Ord, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
+
 newtype AuthenticationChallenge = AuthenticationChallenge Text
   deriving (Eq, Show, FromJSON, ToJSON)
 
@@ -193,7 +196,7 @@ data Command
   | StartNote Username Text
   | FinishNote Username
   | FullTextSearchNote Text
-  | AuthenticateExternal Username AuthenticationChallenge
+  | AuthenticateExternal AuthenticationUsername AuthenticationChallenge
   deriving (Eq, Show)
 
 data OutgoingDiscordEvent

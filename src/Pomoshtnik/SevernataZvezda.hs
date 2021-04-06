@@ -16,7 +16,7 @@ authenticateChallengeM ::
     HasExternalAuthenticationUrl env,
     HasExternalAuthenticationToken env
   ) =>
-  Username ->
+  AuthenticationUsername ->
   AuthenticationChallenge ->
   Username ->
   m (Maybe ())
@@ -37,7 +37,7 @@ authenticateChallengeM username authenticationChallenge discordUsername = do
 authenticateChallenge ::
   TLSConnectionManager ->
   ExternalAuthenticationUrl ->
-  Username ->
+  AuthenticationUsername ->
   AuthenticationChallenge ->
   Username ->
   ExternalAuthenticationToken ->
@@ -45,7 +45,7 @@ authenticateChallenge ::
 authenticateChallenge
   (TLSConnectionManager connectionManager)
   (ExternalAuthenticationUrl url)
-  (Username username)
+  (AuthenticationUsername username)
   (AuthenticationChallenge challenge)
   (Username discordUsername)
   (ExternalAuthenticationToken authenticationToken) = do
