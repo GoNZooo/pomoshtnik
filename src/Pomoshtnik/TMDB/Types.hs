@@ -20,7 +20,7 @@ data APIQuery
   | GetShowQuery ShowId
   | SearchPersonQuery PersonName
   | GetPersonQuery PersonId
-  | GetImageConfigurationData
+  | GetImageConfigurationDataQuery
 
 data ConfigurationData = ConfigurationData
   { images :: ImageConfigurationData,

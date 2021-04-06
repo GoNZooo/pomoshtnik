@@ -77,7 +77,7 @@ apiRequest (TMDBAPIKey key) (GetPersonQuery (PersonId personId)) =
         ]
       initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "person/" <> show personId)
    in initialRequest & HTTP.setQueryString parameters
-apiRequest (TMDBAPIKey key) GetImageConfigurationData =
+apiRequest (TMDBAPIKey key) GetImageConfigurationDataQuery =
   let parameters = [("api_key", Just $ fromString key)]
       initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "configuration")
    in initialRequest & HTTP.setQueryString parameters
@@ -241,7 +241,7 @@ tmdbPosterUrl posterPath' = do
 
 getImageConfigurationData :: TLSConnectionManager -> TMDBAPIKey -> IO (Either String ConfigurationData)
 getImageConfigurationData (TLSConnectionManager manager) apiKey = do
-  let request = apiRequest apiKey GetImageConfigurationData
+  let request = apiRequest apiKey GetImageConfigurationDataQuery
   body <- liftIO $ responseBody <$> HTTP.httpLbs request manager
   case JSON.eitherDecode' body of
     Right imageConfigurationData -> pure $ pure imageConfigurationData
