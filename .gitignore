@@ -4,3 +4,7 @@ tarballs/
 .stack-work/
 .idea
 dev.env
+*.db
+*.db-shm
+*.db-wal
+*.aes
