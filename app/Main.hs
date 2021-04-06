@@ -48,7 +48,6 @@ main = do
     ExternalAuthenticationToken . fromString <$> Environment.getEnv "EXTERNAL_AUTHENTICATION_TOKEN"
   pool <- Logger.runNoLoggingT $ Sqlite.createSqlitePool (fromString "pomoshtnik.db") 8
   Sqlite.runSqlPool (Sqlite.runMigration Database.migrateAll) pool
-  notesInProgress <- newTVarIO mempty
 
   withLogFunc lo $ \lf -> do
     let app =
@@ -63,7 +62,6 @@ main = do
               appTmdbApiKey = tmdbApiKey,
               appTmdbImageConfigurationData = tmdbImageConfigurationData,
               appSqlPool = pool,
-              appNotesInProgress = notesInProgress,
               appExternalAuthenticationUrl = externalAuthenticationUrl,
               appExternalAuthenticationToken = externalAuthenticationToken
             }

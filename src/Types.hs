@@ -52,11 +52,6 @@ newtype ExternalAuthenticationUrl = ExternalAuthenticationUrl String
 newtype ExternalAuthenticationToken = ExternalAuthenticationToken Text
   deriving (Eq, Show, FromJSON, ToJSON)
 
-data InProgressNote = InProgressNote
-  { title :: !Text,
-    entries :: [Text]
-  }
-
 -- | Command line arguments
 newtype Options = Options
   { optionsVerbose :: Bool
@@ -73,7 +68,6 @@ data App = App
     appTmdbApiKey :: !TMDBAPIKey,
     appTmdbImageConfigurationData :: !ImageConfigurationData,
     appSqlPool :: Pool SqlBackend,
-    appNotesInProgress :: TVar (Map Username (TVar InProgressNote)),
     appExternalAuthenticationUrl :: !ExternalAuthenticationUrl,
     appExternalAuthenticationToken :: !ExternalAuthenticationToken
   }
@@ -150,12 +144,6 @@ class HasSqlPool env where
 instance HasSqlPool App where
   sqlPoolL = lens appSqlPool $ \x y -> x {appSqlPool = y}
 
-class HasNotesInProgress env where
-  notesInProgressL :: Lens' env (TVar (Map Username (TVar InProgressNote)))
-
-instance HasNotesInProgress App where
-  notesInProgressL = lens appNotesInProgress $ \x y -> x {appNotesInProgress = y}
-
 class HasExternalAuthenticationUrl env where
   externalAuthenticationUrlL :: Lens' env ExternalAuthenticationUrl
 
@@ -193,8 +181,6 @@ data Command
   | RemoveNoteByTitle Text
   | RemoveNoteByFullTextSearch Text
   | UpdateNote Text Text
-  | StartNote Username Text
-  | FinishNote Username
   | FullTextSearchNote Text
   | AuthenticateExternal AuthenticationUsername AuthenticationChallenge
   deriving (Eq, Show)
