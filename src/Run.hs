@@ -79,7 +79,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
     Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
   | "!login " `Text.isPrefixOf` text =
     case Text.words text of
-      _ : token : _ ->
+      _ : [token] ->
         case UUID.fromText token of
           Just uuid -> Just $ IncomingCommand {channelId = channelId', user = author, command = Login uuid}
           Nothing -> Nothing
@@ -135,8 +135,8 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
       _ -> Nothing
   | "!show-by-id " `Text.isPrefixOf` text =
     case Text.words text of
-      _ : rest ->
-        let maybeId = fmap ShowId $ readMaybe $ Text.unpack $ Text.concat rest
+      _ : [idText] ->
+        let maybeId = fmap ShowId $ readMaybe $ Text.unpack idText
          in case maybeId of
               Just showId ->
                 Just $ IncomingCommand {channelId = channelId', user = author, command = GetShow showId}
@@ -164,7 +164,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
       _ -> Nothing
   | "!remove-note " `Text.isPrefixOf` text =
     case Text.words text of
-      _ : title' : [] ->
+      _ : [title'] ->
         Just $ IncomingCommand {channelId = channelId', user = author, command = RemoveNoteByTitle title'}
       _ -> Nothing
   | "!remove-all-notes " `Text.isPrefixOf` text =
@@ -209,7 +209,7 @@ decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author
       _ -> Nothing
   | "!authenticate-external " `Text.isPrefixOf` text =
     case Text.words text of
-      _ : username' : challengeText : _ ->
+      _ : [username', challengeText] ->
         Just $
           IncomingCommand
             { channelId = channelId',
