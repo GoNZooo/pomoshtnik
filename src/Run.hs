@@ -12,7 +12,14 @@ import Database.Persist (Entity (..))
 import Database.Persist.Sql (BackendKey (SqlBackendKey))
 import Discord (RunDiscordOpts (..))
 import qualified Discord
-import Discord.Types (CreateEmbed (..), CreateEmbedImage (..), EmbedField (..), Event (..), Message (..), User (..))
+import Discord.Types
+  ( CreateEmbed (..),
+    CreateEmbedImage (..),
+    EmbedField (..),
+    Event (..),
+    Message (..),
+    User (..),
+  )
 import Import
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Pomoshtnik.Database as Database
@@ -43,183 +50,227 @@ import qualified Yesod.Core as Yesod
 
 run :: RIO App ()
 run = do
-  token <- liftIO $ Environment.getEnv "DISCORD_API_TOKEN" >>= \t -> pure $ "Bot " <> Text.pack t
-  logFunction <- asks appLogFunc
-  eventQueue <- asks appDiscordEvents
-  handleReference <- asks appDiscordHandle
-  appState <- ask
+  applicationState@App
+    { appLogFunc = logFunction,
+      appDiscordEvents = eventQueue,
+      appDiscordHandle = handleReference
+    } <-
+    ask
+
+  discordApiToken <-
+    liftIO $
+      Environment.getEnv "DISCORD_API_TOKEN" >>= \t ->
+        pure $
+          "Bot " <> Text.pack t
 
   let runCommandHandler = do
         forever $ do
           maybeEvent <- atomically $ decodeCommand <$> readTQueue eventQueue
           case maybeEvent of
             Just event -> do
-              runRIO appState $ handleCommand event
+              runRIO applicationState $ handleCommand event
             Nothing ->
               mempty
       runDiscordInputThread = do
         liftIO $
           Discord.runDiscord
             Discord.def
-              { discordToken = token,
-                discordOnStart = onStart handleReference $ runRIO logFunction $ discordLog "Started reading messages",
+              { discordToken = discordApiToken,
+                discordOnStart =
+                  onStart handleReference $
+                    runRIO logFunction $
+                      discordLog "Started reading messages",
                 discordOnEvent = onEvent eventQueue
               }
   (discordResult, ()) <-
     liftIO $
       concurrently runDiscordInputThread $
-        concurrently_ runCommandHandler $ Warp.run 4000 =<< Yesod.toWaiApp (WebBase appState)
+        concurrently_ runCommandHandler $
+          Warp.run 4000 =<< Yesod.toWaiApp (WebBase applicationState)
   logErrorS "Discord" $ display discordResult
 
 decodeCommand :: Event -> Maybe IncomingCommand
-decodeCommand (MessageCreate Message {messageText = text, messageAuthor = author, messageChannel = channelId'})
-  | text == "!generate-token" =
-    Just $ IncomingCommand {channelId = channelId', user = author, command = GenerateToken}
-  | text == "!authenticated" =
-    Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
-  | "!login " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : [token] ->
-        case UUID.fromText token of
-          Just uuid -> Just $ IncomingCommand {channelId = channelId', user = author, command = Login uuid}
-          Nothing -> Nothing
-      _ -> Nothing
-  | "!movie " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = SearchMovie $ MovieTitle $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!movie-candidates " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = SearchMovieCandidates $ MovieTitle $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!movie-by-id " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        let maybeId = fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
-         in case maybeId of
-              Just movieId ->
-                Just $ IncomingCommand {channelId = channelId', user = author, command = GetMovie movieId}
-              Nothing -> Nothing
-      _ -> Nothing
-  | "!show " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = SearchShow $ ShowTitle $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!show-candidates " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = SearchShowCandidates $ ShowTitle $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!show-by-id " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : [idText] ->
-        let maybeId = fmap ShowId $ readMaybe $ Text.unpack idText
-         in case maybeId of
-              Just showId ->
-                Just $ IncomingCommand {channelId = channelId', user = author, command = GetShow showId}
-              Nothing -> Nothing
-      _ -> Nothing
-  | "!person " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = SearchPerson $ PersonName $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!add-note " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : title' : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = AddNote title' $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!remove-note " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : [title'] ->
-        Just $ IncomingCommand {channelId = channelId', user = author, command = RemoveNoteByTitle title'}
-      _ -> Nothing
-  | "!remove-all-notes " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = RemoveNoteByFullTextSearch $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!update-note " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : title' : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = UpdateNote title' $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!search-note " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = FullTextSearchNote $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!add-to-note " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : title' : rest ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command = AddToNote title' $ Text.unwords rest
-            }
-      _ -> Nothing
-  | "!authenticate-external " `Text.isPrefixOf` text =
-    case Text.words text of
-      _ : [username', challengeText] ->
-        Just $
-          IncomingCommand
-            { channelId = channelId',
-              user = author,
-              command =
-                AuthenticateExternal (AuthenticationUsername username') $
-                  AuthenticationChallenge challengeText
-            }
-      _ -> Nothing
-  | otherwise = Nothing
+decodeCommand
+  ( MessageCreate
+      Message
+        { messageText = text,
+          messageAuthor = author,
+          messageChannel =
+            channelId'
+        }
+    )
+    | text == "!generate-token" =
+      Just $ IncomingCommand {channelId = channelId', user = author, command = GenerateToken}
+    | text == "!authenticated" =
+      Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
+    | "!login " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : [token] ->
+          case UUID.fromText token of
+            Just uuid ->
+              Just $
+                IncomingCommand
+                  { channelId = channelId',
+                    user = author,
+                    command =
+                      Login uuid
+                  }
+            Nothing -> Nothing
+        _ -> Nothing
+    | "!movie " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = SearchMovie $ MovieTitle $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!movie-candidates " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = SearchMovieCandidates $ MovieTitle $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!movie-by-id " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          let maybeId = fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
+           in case maybeId of
+                Just movieId ->
+                  Just $
+                    IncomingCommand
+                      { channelId = channelId',
+                        user = author,
+                        command =
+                          GetMovie movieId
+                      }
+                Nothing -> Nothing
+        _ -> Nothing
+    | "!show " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = SearchShow $ ShowTitle $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!show-candidates " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = SearchShowCandidates $ ShowTitle $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!show-by-id " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : [idText] ->
+          let maybeId = fmap ShowId $ readMaybe $ Text.unpack idText
+           in case maybeId of
+                Just showId ->
+                  Just $
+                    IncomingCommand
+                      { channelId = channelId',
+                        user = author,
+                        command =
+                          GetShow showId
+                      }
+                Nothing -> Nothing
+        _ -> Nothing
+    | "!person " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = SearchPerson $ PersonName $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!add-note " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : title' : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = AddNote title' $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!remove-note " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : [title'] ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command =
+                  RemoveNoteByTitle title'
+              }
+        _ -> Nothing
+    | "!remove-all-notes " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = RemoveNoteByFullTextSearch $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!update-note " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : title' : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = UpdateNote title' $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!search-note " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = FullTextSearchNote $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!add-to-note " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : title' : rest ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command = AddToNote title' $ Text.unwords rest
+              }
+        _ -> Nothing
+    | "!authenticate-external " `Text.isPrefixOf` text =
+      case Text.words text of
+        _ : [username', challengeText] ->
+          Just $
+            IncomingCommand
+              { channelId = channelId',
+                user = author,
+                command =
+                  AuthenticateExternal (AuthenticationUsername username') $
+                    AuthenticationChallenge challengeText
+              }
+        _ -> Nothing
+    | otherwise = Nothing
 decodeCommand _ = Nothing
 
 handleCommand ::
@@ -241,64 +292,109 @@ handleCommand ::
 handleCommand IncomingCommand {user = user', command = GenerateToken} = do
   newToken <- addNewToken user'
   discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user' <> "'"
-handleCommand IncomingCommand {channelId = channelId', user = user', command = Login suppliedToken} = do
-  whenM (authenticateUser user' suppliedToken) $ do
-    replyTo channelId' user' (Just "You have been authenticated.") Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = AuthenticatedUsers} = do
-  usersReference <- view authenticatedUsersL
-  whenM (userIsAuthenticated user') $ do
-    authenticatedUsers <- readTVarIO usersReference
-    let usersString =
-          Text.unlines (Set.elems $ Set.map (\u -> "- " <> userName u <> "#" <> userDiscrim u) authenticatedUsers)
-        messageEmbed =
-          Discord.def
-            { createEmbedFields =
-                [ EmbedField
-                    { embedFieldName = "Authenticated Users",
-                      embedFieldValue = usersString,
-                      embedFieldInline = Nothing
-                    }
-                ]
-            }
-    replyTo channelId' user' Nothing (Just messageEmbed)
-handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchMovie movieTitle} = do
-  movieResult <- TMDB.searchMovieM movieTitle
-  case movieResult of
-    Right movie -> do
-      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
-      let embed = movieEmbed imageBaseUrl PosterW780 movie
-      replyTo channelId' user' Nothing embed
-    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchMovieCandidates movieTitle} = do
-  movieCandidatesResult <- TMDB.searchMovieCandidatesM movieTitle
-  case movieCandidatesResult of
-    Right movieCandidates -> do
-      let embed = Just $ movieCandidatesEmbed movieCandidates
-      replyTo channelId' user' Nothing embed
-    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = GetMovie movieId} = do
-  movieCandidatesResult <- TMDB.getMovieM movieId
-  case movieCandidatesResult of
-    Right movie -> do
-      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
-      let embed = movieEmbed imageBaseUrl PosterW780 movie
-      replyTo channelId' user' Nothing embed
-    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchShow showTitle} = do
-  movieResult <- TMDB.searchShowM showTitle
-  case movieResult of
-    Right movie -> do
-      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
-      let embed = showEmbed imageBaseUrl PosterW780 movie
-      replyTo channelId' user' Nothing embed
-    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchShowCandidates showTitle} = do
-  showCandidatesResult <- TMDB.searchShowCandidatesM showTitle
-  case showCandidatesResult of
-    Right showCandidates -> do
-      let embed = Just $ showCandidatesEmbed showCandidates
-      replyTo channelId' user' Nothing embed
-    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        Login suppliedToken
+    } = do
+    whenM (authenticateUser user' suppliedToken) $ do
+      replyTo channelId' user' (Just "You have been authenticated.") Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        AuthenticatedUsers
+    } = do
+    usersReference <- view authenticatedUsersL
+    whenM (userIsAuthenticated user') $ do
+      authenticatedUsers <- readTVarIO usersReference
+      let usersString =
+            Text.unlines
+              ( Set.elems $
+                  Set.map (\u -> "- " <> userName u <> "#" <> userDiscrim u) authenticatedUsers
+              )
+          messageEmbed =
+            Discord.def
+              { createEmbedFields =
+                  [ EmbedField
+                      { embedFieldName = "Authenticated Users",
+                        embedFieldValue = usersString,
+                        embedFieldInline = Nothing
+                      }
+                  ]
+              }
+      replyTo channelId' user' Nothing (Just messageEmbed)
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        SearchMovie movieTitle
+    } = do
+    movieResult <- TMDB.searchMovieM movieTitle
+    case movieResult of
+      Right movie -> do
+        ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+        let embed = movieEmbed imageBaseUrl PosterW780 movie
+        replyTo channelId' user' Nothing embed
+      Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        SearchMovieCandidates movieTitle
+    } = do
+    movieCandidatesResult <- TMDB.searchMovieCandidatesM movieTitle
+    case movieCandidatesResult of
+      Right movieCandidates -> do
+        let embed = Just $ movieCandidatesEmbed movieCandidates
+        replyTo channelId' user' Nothing embed
+      Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        GetMovie movieId
+    } = do
+    movieCandidatesResult <- TMDB.getMovieM movieId
+    case movieCandidatesResult of
+      Right movie -> do
+        ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+        let embed = movieEmbed imageBaseUrl PosterW780 movie
+        replyTo channelId' user' Nothing embed
+      Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        SearchShow showTitle
+    } = do
+    movieResult <- TMDB.searchShowM showTitle
+    case movieResult of
+      Right movie -> do
+        ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+        let embed = showEmbed imageBaseUrl PosterW780 movie
+        replyTo channelId' user' Nothing embed
+      Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        SearchShowCandidates showTitle
+    } = do
+    showCandidatesResult <- TMDB.searchShowCandidatesM showTitle
+    case showCandidatesResult of
+      Right showCandidates -> do
+        let embed = Just $ showCandidatesEmbed showCandidates
+        replyTo channelId' user' Nothing embed
+      Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
 handleCommand IncomingCommand {channelId = channelId', user = user', command = GetShow showId} = do
   movieCandidatesResult <- TMDB.getShowM showId
   case movieCandidatesResult of
@@ -307,18 +403,24 @@ handleCommand IncomingCommand {channelId = channelId', user = user', command = G
       let embed = showEmbed imageBaseUrl PosterW780 movie
       replyTo channelId' user' Nothing embed
     Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-handleCommand IncomingCommand {channelId = channelId', user = user', command = SearchPerson personName} = do
-  personCandidateResult <- TMDB.searchPersonM personName
-  case personCandidateResult of
-    Right personCandidate@PersonCandidate {id = personId} -> do
-      personResult <- TMDB.getPersonM personId
-      case personResult of
-        Right person -> do
-          ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
-          let embed = personEmbed imageBaseUrl ProfileOriginal personCandidate person
-          replyTo channelId' user' Nothing embed
-        Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
-    Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+handleCommand
+  IncomingCommand
+    { channelId = channelId',
+      user = user',
+      command =
+        SearchPerson personName
+    } = do
+    personCandidateResult <- TMDB.searchPersonM personName
+    case personCandidateResult of
+      Right personCandidate@PersonCandidate {id = personId} -> do
+        personResult <- TMDB.getPersonM personId
+        case personResult of
+          Right person -> do
+            ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+            let embed = personEmbed imageBaseUrl ProfileOriginal personCandidate person
+            replyTo channelId' user' Nothing embed
+          Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
+      Left error' -> replyTo channelId' user' (Just $ fromString error') Nothing
 handleCommand
   IncomingCommand
     { channelId = channelId',
@@ -391,7 +493,11 @@ handleCommandForUser
           Just () ->
             replyTo channelId' user' (Just $ "Added to note with title: '" <> title' <> "'") Nothing
           Nothing ->
-            replyTo channelId' user' (Just $ "Unexpected error, note did not exist when still not found") Nothing
+            replyTo
+              channelId'
+              user'
+              (Just $ "Unexpected error, note did not exist when still not found")
+              Nothing
 handleCommandForUser
   (Just (Entity userId' _))
   IncomingCommand
@@ -404,7 +510,11 @@ handleCommandForUser
       Just () ->
         replyTo channelId' user' (Just "Note added to") Nothing
       Nothing ->
-        replyTo channelId' user' (Just $ "Unable to add note; title already exists: '" <> title' <> "'") Nothing
+        replyTo
+          channelId'
+          user'
+          (Just $ "Unable to add note; title already exists: '" <> title' <> "'")
+          Nothing
 handleCommandForUser
   (Just (Entity userId' _))
   IncomingCommand
@@ -452,12 +562,15 @@ notesEmbed :: [Entity Database.Note] -> CreateEmbed
 notesEmbed notes =
   let fields =
         fmap
-          ( \(Entity (Database.NoteKey (SqlBackendKey noteId)) (Database.Note {noteTitle = title', noteBody = body})) ->
-              EmbedField
-                { embedFieldName = title' <> " [" <> tshow noteId <> "]",
-                  embedFieldValue = body,
-                  embedFieldInline = Nothing
-                }
+          ( \( Entity
+                 (Database.NoteKey (SqlBackendKey noteId))
+                 (Database.Note {noteTitle = title', noteBody = body})
+               ) ->
+                EmbedField
+                  { embedFieldName = title' <> " [" <> tshow noteId <> "]",
+                    embedFieldValue = body,
+                    embedFieldInline = Nothing
+                  }
           )
           notes
    in Discord.def {createEmbedFields = fields}
@@ -476,7 +589,11 @@ movieEmbed
       credits = credits'
     } =
     let fields =
-          [ EmbedField {embedFieldName = "Description", embedFieldValue = overview', embedFieldInline = Nothing}
+          [ EmbedField
+              { embedFieldName = "Description",
+                embedFieldValue = overview',
+                embedFieldInline = Nothing
+              }
           ]
             <> maybe [] (\castEntries -> [castField castEntries]) (credits' & cast)
         castField castEntries =
@@ -489,7 +606,9 @@ movieEmbed
         castText castEntries =
           take maxCastEntries castEntries
             & map
-              (\CastEntry {name = name', character = character'} -> mconcat ["**", name', "** as ", character'])
+              ( \CastEntry {name = name', character = character'} ->
+                  mconcat ["**", name', "** as ", character']
+              )
             & Text.unlines
         titleText = mconcat [title', " (", tshow rating, maybe "" (", " <>) releaseDate', ")"]
         embedImage = fmap (CreateEmbedImageUrl . posterUrl imageBaseUrl posterSize) posterPath'
@@ -517,7 +636,12 @@ movieCandidatesEmbed candidates =
                   EmbedField
                     { embedFieldName =
                         mconcat
-                          [maybe "" unMovieTitle title', " (", tshow $ unMovieId id', ", ", tshow voteAverage']
+                          [ maybe "" unMovieTitle title',
+                            " (",
+                            tshow $ unMovieId id',
+                            ", ",
+                            tshow voteAverage'
+                          ]
                           <> maybe "" (", " <>) releaseDate'
                           <> ")",
                       embedFieldValue = if overview' /= "" then overview' else "N/A",
@@ -613,7 +737,11 @@ showEmbed
       lastEpisodeToAir = maybeLastEpisode
     } =
     let fields =
-          [ EmbedField {embedFieldName = "Description", embedFieldValue = overview', embedFieldInline = Nothing}
+          [ EmbedField
+              { embedFieldName = "Description",
+                embedFieldValue = overview',
+                embedFieldInline = Nothing
+              }
           ]
             <> maybe [] (\castEntries -> [castField castEntries]) (credits' & cast)
             <> maybe
@@ -638,8 +766,21 @@ showEmbed
                     [ "S" <> Text.justifyRight 2 '0' (tshow seasonNumber'),
                       "E" <> Text.justifyRight 2 '0' (tshow episodeNumber')
                     ]
-                embedText = mconcat [name', " (", seasonEpisodePair, ") aired on ", airDate', "\n\n", episodeOverview]
-             in EmbedField {embedFieldName = fieldName, embedFieldValue = embedText, embedFieldInline = Nothing}
+                embedText =
+                  mconcat
+                    [ name',
+                      " (",
+                      seasonEpisodePair,
+                      ") aired on ",
+                      airDate',
+                      "\n\n",
+                      episodeOverview
+                    ]
+             in EmbedField
+                  { embedFieldName = fieldName,
+                    embedFieldValue = embedText,
+                    embedFieldInline = Nothing
+                  }
         castField castEntries =
           EmbedField
             { embedFieldName = "Cast",
@@ -651,7 +792,9 @@ showEmbed
         castText castEntries =
           take maxCastEntries castEntries
             & map
-              (\CastEntry {name = name', character = character'} -> mconcat ["**", name', "** as ", character'])
+              ( \CastEntry {name = name', character = character'} ->
+                  mconcat ["**", name', "** as ", character']
+              )
             & Text.unlines
         titleText = mconcat [title', " (", tshow rating, maybe "" (", " <>) firstAirDate', ")"]
         embedImage = fmap (CreateEmbedImageUrl . posterUrl imageBaseUrl posterSize) posterPath'
@@ -679,7 +822,12 @@ showCandidatesEmbed candidates =
                   EmbedField
                     { embedFieldName =
                         mconcat
-                          [maybe "" unShowTitle title', " (", tshow $ unShowId id', ", ", tshow voteAverage']
+                          [ maybe "" unShowTitle title',
+                            " (",
+                            tshow $ unShowId id',
+                            ", ",
+                            tshow voteAverage'
+                          ]
                           <> maybe "" (", " <>) firstAirDate'
                           <> ")",
                       embedFieldValue = if overview' /= "" then overview' else "N/A",
