@@ -132,6 +132,8 @@ instance HasActiveTokens App where
       (activeTokens . appBotState)
       (\app@App {appBotState = botState} y -> app {appBotState = botState {activeTokens = y}})
 
+-- | The environment has a reference to a Discord handle. `IORef` because we expect it to be
+-- written to once and the same result read every time subsequently.
 class HasDiscordHandle env where
   discordHandleL :: Lens' env (IORef DiscordHandle)
 
