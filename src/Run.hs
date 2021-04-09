@@ -564,7 +564,7 @@ notesEmbed notes =
         fmap
           ( \( Entity
                  (Database.NoteKey (SqlBackendKey noteId))
-                 (Database.Note {noteTitle = title', noteBody = body})
+                 Database.Note {noteTitle = title', noteBody = body}
                ) ->
                 EmbedField
                   { embedFieldName = title' <> " [" <> tshow noteId <> "]",

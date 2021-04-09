@@ -21,7 +21,8 @@ apiRequest (TMDBAPIKey key) (SearchMovieQuery (MovieTitle movieTitle)) =
           ("page", Just $ fromString $ show (1 :: Int)),
           ("api_key", Just $ fromString key)
         ]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/movie")
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/movie")
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (SearchMovieCandidatesQuery (MovieTitle movieTitle)) =
   let parameters =
@@ -30,12 +31,18 @@ apiRequest (TMDBAPIKey key) (SearchMovieCandidatesQuery (MovieTitle movieTitle))
           ("page", Just $ fromString $ show (1 :: Int)),
           ("api_key", Just $ fromString key)
         ]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/movie")
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/movie")
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (GetMovieQuery (MovieId movieId)) =
   let parameters =
-        [("language", Just "en_US"), ("api_key", Just $ fromString key), ("append_to_response", Just "credits")]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "movie/" <> show movieId)
+        [ ("language", Just "en_US"),
+          ("api_key", Just $ fromString key),
+          ("append_to_response", Just "credits")
+        ]
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $
+          HTTP.parseRequest (apiBaseUrl <> "movie/" <> show movieId)
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (SearchShowQuery (ShowTitle showTitle)) =
   let parameters =
@@ -44,7 +51,8 @@ apiRequest (TMDBAPIKey key) (SearchShowQuery (ShowTitle showTitle)) =
           ("page", Just $ fromString $ show (1 :: Int)),
           ("api_key", Just $ fromString key)
         ]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/tv")
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/tv")
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (SearchShowCandidatesQuery (ShowTitle showTitle)) =
   let parameters =
@@ -53,12 +61,17 @@ apiRequest (TMDBAPIKey key) (SearchShowCandidatesQuery (ShowTitle showTitle)) =
           ("page", Just $ fromString $ show (1 :: Int)),
           ("api_key", Just $ fromString key)
         ]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/tv")
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/tv")
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (GetShowQuery (ShowId showId)) =
   let parameters =
-        [("language", Just "en_US"), ("api_key", Just $ fromString key), ("append_to_response", Just "credits,external_ids")]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "tv/" <> show showId)
+        [ ("language", Just "en_US"),
+          ("api_key", Just $ fromString key),
+          ("append_to_response", Just "credits,external_ids")
+        ]
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "tv/" <> show showId)
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (SearchPersonQuery (PersonName personName)) =
   let parameters =
@@ -67,7 +80,8 @@ apiRequest (TMDBAPIKey key) (SearchPersonQuery (PersonName personName)) =
           ("page", Just $ fromString $ show (1 :: Int)),
           ("api_key", Just $ fromString key)
         ]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/person")
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "search/person")
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) (GetPersonQuery (PersonId personId)) =
   let parameters =
@@ -75,11 +89,14 @@ apiRequest (TMDBAPIKey key) (GetPersonQuery (PersonId personId)) =
           ("api_key", Just $ fromString key),
           ("append_to_response", Just "combined_credits")
         ]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "person/" <> show personId)
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $
+          HTTP.parseRequest (apiBaseUrl <> "person/" <> show personId)
    in initialRequest & HTTP.setQueryString parameters
 apiRequest (TMDBAPIKey key) GetImageConfigurationDataQuery =
   let parameters = [("api_key", Just $ fromString key)]
-      initialRequest = maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "configuration")
+      initialRequest =
+        maybe HTTP.defaultRequest RIO.id $ HTTP.parseRequest (apiBaseUrl <> "configuration")
    in initialRequest & HTTP.setQueryString parameters
 
 searchMovieM ::
@@ -112,7 +129,11 @@ searchMovieCandidatesM movieTitle = do
 
   liftIO $ searchMovieCandidates manager apiKey movieTitle
 
-searchMovieCandidates :: TLSConnectionManager -> TMDBAPIKey -> MovieTitle -> IO (Either String [MovieCandidate])
+searchMovieCandidates ::
+  TLSConnectionManager ->
+  TMDBAPIKey ->
+  MovieTitle ->
+  IO (Either String [MovieCandidate])
 searchMovieCandidates (TLSConnectionManager manager) apiKey movieTitle = do
   let request = apiRequest apiKey (SearchMovieCandidatesQuery movieTitle)
   body <- responseBody <$> HTTP.httpLbs request manager
@@ -167,7 +188,11 @@ searchShowCandidatesM showTitle = do
 
   liftIO $ searchShowCandidates manager apiKey showTitle
 
-searchShowCandidates :: TLSConnectionManager -> TMDBAPIKey -> ShowTitle -> IO (Either String [ShowCandidate])
+searchShowCandidates ::
+  TLSConnectionManager ->
+  TMDBAPIKey ->
+  ShowTitle ->
+  IO (Either String [ShowCandidate])
 searchShowCandidates (TLSConnectionManager manager) apiKey showTitle = do
   let request = apiRequest apiKey (SearchShowCandidatesQuery showTitle)
   body <- responseBody <$> HTTP.httpLbs request manager
@@ -202,7 +227,11 @@ searchPersonM personName = do
 
   liftIO $ searchPerson manager apiKey personName
 
-searchPerson :: TLSConnectionManager -> TMDBAPIKey -> PersonName -> IO (Either String PersonCandidate)
+searchPerson ::
+  TLSConnectionManager ->
+  TMDBAPIKey ->
+  PersonName ->
+  IO (Either String PersonCandidate)
 searchPerson (TLSConnectionManager manager) apiKey personName = do
   let request = apiRequest apiKey (SearchPersonQuery personName)
   body <- responseBody <$> HTTP.httpLbs request manager
@@ -239,7 +268,10 @@ tmdbPosterUrl posterPath' = do
   ImageConfigurationData {secureBaseUrl = baseImageUrl} <- view tmdbImageConfigurationDataL
   pure $ baseImageUrl <> posterPath'
 
-getImageConfigurationData :: TLSConnectionManager -> TMDBAPIKey -> IO (Either String ConfigurationData)
+getImageConfigurationData ::
+  TLSConnectionManager ->
+  TMDBAPIKey ->
+  IO (Either String ConfigurationData)
 getImageConfigurationData (TLSConnectionManager manager) apiKey = do
   let request = apiRequest apiKey GetImageConfigurationDataQuery
   body <- liftIO $ responseBody <$> HTTP.httpLbs request manager

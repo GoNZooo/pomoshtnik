@@ -100,7 +100,8 @@ class HasTMDBImageConfigurationData env where
   tmdbImageConfigurationDataL :: Lens' env ImageConfigurationData
 
 instance HasTMDBImageConfigurationData App where
-  tmdbImageConfigurationDataL = lens appTmdbImageConfigurationData $ \x y -> x {appTmdbImageConfigurationData = y}
+  tmdbImageConfigurationDataL =
+    lens appTmdbImageConfigurationData $ \x y -> x {appTmdbImageConfigurationData = y}
 
 class HasDiscordEventQueue env where
   discordEventQueueL :: Lens' env (TQueue Event)

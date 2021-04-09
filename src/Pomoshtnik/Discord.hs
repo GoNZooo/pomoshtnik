@@ -19,22 +19,24 @@ import Discord.Types
   )
 import Import
 
--- | When supplied as the `onStart` for `Discord.runDiscord` will pull out the active discord handle and fill the ref
--- with it. This allows us to use the handle in another thread outside of the normal Discord context when we want to
--- send events. `onStartAction` will be run at the end of `onStart` and can be used for logging that we started, for
--- example.
+-- | When supplied as the `onStart` for `Discord.runDiscord` will pull out the active discord handle
+-- and fill the ref with it. This allows us to use the handle in another thread outside of the
+-- normal Discord context when we want to send events. `onStartAction` will be run at the end of
+-- `onStart` and can be used for logging that we started, for example.
 onStart :: IORef DiscordHandle -> IO () -> DiscordHandler ()
 onStart handleReference onStartAction = do
   discordHandle <- ask
   writeIORef handleReference discordHandle
   liftIO onStartAction
 
--- | Forwards all received events to a queue of events, ideally handled in a separate thread and possibly other context.
+-- | Forwards all received events to a queue of events, ideally handled in a separate thread and
+-- possibly other context.
 onEvent :: TQueue Event -> Event -> DiscordHandler ()
 onEvent eventQueue event = liftIO $ atomically $ writeTQueue eventQueue event
 
--- | Automatically embeds a user's tag at the start of a message. Supports sending text, an embed or both.
--- Requires a Discord handle in the executing context because we are using it to make REST calls.
+-- | Automatically embeds a user's tag at the start of a message. Supports sending text, an embed
+-- or both. Requires a Discord handle in the executing context because we are using it to make REST
+-- calls.
 replyTo ::
   (MonadReader env m, HasDiscordHandle env, MonadIO m) =>
   ChannelId ->
