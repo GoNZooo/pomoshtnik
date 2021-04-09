@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cb3ba55c30faa31fef27d56411a9fca45fa475b18c42890089b891c5f63917b3
+-- hash: 1f1223f5767a642ba746a88823302f34154c95b7191334ffa183f09404162199
 
 name:           pomoshtnik
 version:        0.1.0.0
@@ -35,7 +35,6 @@ library
       Pomoshtnik.Web
       Run
       Types
-      Util
   other-modules:
       Paths_pomoshtnik
   hs-source-dirs:
