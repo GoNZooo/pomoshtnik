@@ -3,7 +3,7 @@
 tarballs/
 .stack-work/
 .idea
-dev.env
+*.env
 *.db
 *.db-shm
 *.db-wal
