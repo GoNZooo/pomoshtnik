@@ -1,18 +1,3 @@
-# FROM fpco/stack-build:lts-16.31 as build
-
-# RUN mkdir /opt/build
-# COPY . /opt/build
-# RUN cd /opt/build && stack install
-
-# FROM ubuntu:20.10 as pomoshtnik
-# RUN mkdir -p /opt/pomoshtnik
-# WORKDIR /opt/pomoshtnik
-# #RUN apt-get update && apt-get install -y ca-certificates libgmp-dev
-# COPY --from=build /root/.local/bin/pomoshtnik-exe pomoshtnik
-
-# CMD ["/opt/pomoshtnik/pomoshtnik"]
-# Loosely based on https://www.fpcomplete.com/blog/2017/12/building-haskell-apps-with-docker
-
 FROM fpco/stack-build:lts-16.31 as dependencies
 RUN mkdir /opt/build
 WORKDIR /opt/build
