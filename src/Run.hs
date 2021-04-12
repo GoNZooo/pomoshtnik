@@ -103,7 +103,7 @@ decodeCommand
       Just $ IncomingCommand {channelId = channelId', user = author, command = GenerateToken}
     | text == "!authenticated" =
       Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
-    | "!login " `Text.isPrefixOf` text =
+    | text `startsWith` "!login " =
       case Text.words text of
         _ : [token] ->
           case UUID.fromText token of
@@ -117,7 +117,7 @@ decodeCommand
                   }
             Nothing -> Nothing
         _ -> Nothing
-    | "!movie " `Text.isPrefixOf` text =
+    | text `startsWith` "!movie " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -127,7 +127,7 @@ decodeCommand
                 command = SearchMovie $ MovieTitle $ Text.unwords rest
               }
         _ -> Nothing
-    | "!movie-candidates " `Text.isPrefixOf` text =
+    | text `startsWith` "!movie-candidates " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -137,7 +137,7 @@ decodeCommand
                 command = SearchMovieCandidates $ MovieTitle $ Text.unwords rest
               }
         _ -> Nothing
-    | "!movie-by-id " `Text.isPrefixOf` text =
+    | text `startsWith` "!movie-by-id " =
       case Text.words text of
         _ : rest ->
           let maybeId = fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
@@ -152,7 +152,7 @@ decodeCommand
                       }
                 Nothing -> Nothing
         _ -> Nothing
-    | "!show " `Text.isPrefixOf` text =
+    | text `startsWith` "!show " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -162,7 +162,7 @@ decodeCommand
                 command = SearchShow $ ShowTitle $ Text.unwords rest
               }
         _ -> Nothing
-    | "!show-candidates " `Text.isPrefixOf` text =
+    | text `startsWith` "!show-candidates " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -172,7 +172,7 @@ decodeCommand
                 command = SearchShowCandidates $ ShowTitle $ Text.unwords rest
               }
         _ -> Nothing
-    | "!show-by-id " `Text.isPrefixOf` text =
+    | text `startsWith` "!show-by-id " =
       case Text.words text of
         _ : [idText] ->
           let maybeId = fmap ShowId $ readMaybe $ Text.unpack idText
@@ -187,7 +187,7 @@ decodeCommand
                       }
                 Nothing -> Nothing
         _ -> Nothing
-    | "!person " `Text.isPrefixOf` text =
+    | text `startsWith` "!person " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -197,7 +197,7 @@ decodeCommand
                 command = SearchPerson $ PersonName $ Text.unwords rest
               }
         _ -> Nothing
-    | "!add-note " `Text.isPrefixOf` text =
+    | text `startsWith` "!add-note " =
       case Text.words text of
         _ : title' : rest ->
           Just $
@@ -207,7 +207,7 @@ decodeCommand
                 command = AddNote title' $ Text.unwords rest
               }
         _ -> Nothing
-    | "!remove-note " `Text.isPrefixOf` text =
+    | text `startsWith` "!remove-note " =
       case Text.words text of
         _ : [title'] ->
           Just $
@@ -218,7 +218,7 @@ decodeCommand
                   RemoveNoteByTitle title'
               }
         _ -> Nothing
-    | "!remove-all-notes " `Text.isPrefixOf` text =
+    | text `startsWith` "!remove-all-notes " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -228,7 +228,7 @@ decodeCommand
                 command = RemoveNoteByFullTextSearch $ Text.unwords rest
               }
         _ -> Nothing
-    | "!update-note " `Text.isPrefixOf` text =
+    | text `startsWith` "!update-note " =
       case Text.words text of
         _ : title' : rest ->
           Just $
@@ -238,7 +238,7 @@ decodeCommand
                 command = UpdateNote title' $ Text.unwords rest
               }
         _ -> Nothing
-    | "!search-note " `Text.isPrefixOf` text =
+    | text `startsWith` "!search-note " =
       case Text.words text of
         _ : rest ->
           Just $
@@ -248,7 +248,7 @@ decodeCommand
                 command = FullTextSearchNote $ Text.unwords rest
               }
         _ -> Nothing
-    | "!add-to-note " `Text.isPrefixOf` text =
+    | text `startsWith` "!add-to-note " =
       case Text.words text of
         _ : title' : rest ->
           Just $
@@ -258,7 +258,7 @@ decodeCommand
                 command = AddToNote title' $ Text.unwords rest
               }
         _ -> Nothing
-    | "!authenticate-external " `Text.isPrefixOf` text =
+    | text `startsWith` "!authenticate-external " =
       case Text.words text of
         _ : [username', challengeText] ->
           Just $
@@ -880,3 +880,6 @@ discordLog message = logInfoS "Discord" $ display message
 
 maxCastEntries :: Int
 maxCastEntries = 20
+
+startsWith :: Text -> Text -> Bool
+startsWith = flip Text.isPrefixOf
