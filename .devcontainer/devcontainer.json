@@ -1,8 +1,8 @@
 {
-  "dockerFile": "Dockerfile",
-  "forwardPorts": [
-    3000
-  ],
+  "name": "pomoshtnik",
+  "service": "pomoshtnik",
+  "workspaceFolder": "/workspace",
+  "dockerComposeFile": "./docker-compose.yaml",
   "extensions": [
     "sjurmillidahl.ormolu-vscode",
     "dramforever.vscode-ghc-simple",

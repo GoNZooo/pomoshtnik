@@ -8,3 +8,4 @@ tarballs/
 *.db-shm
 *.db-wal
 *.aes
+.devcontainer/build
