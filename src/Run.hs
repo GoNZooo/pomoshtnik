@@ -50,14 +50,9 @@ import qualified Yesod.Core as Yesod
 
 run :: RIO App ()
 run = do
-  applicationState@App
-    { appLogFunc = logFunction,
-      appDiscordEvents = eventQueue,
-      appDiscordHandle = handleReference
-    } <-
-    ask
+  applicationState@App {appLogFunc, appDiscordEvents, appDiscordHandle} <- ask
 
-  discordApiToken <-
+  discordToken <-
     liftIO $
       Environment.getEnv "DISCORD_API_TOKEN" >>= \t ->
         pure $
@@ -65,23 +60,13 @@ run = do
 
   let runCommandHandler = do
         forever $ do
-          maybeEvent <- atomically $ decodeCommand <$> readTQueue eventQueue
-          case maybeEvent of
-            Just event -> do
-              runRIO applicationState $ handleCommand event
-            Nothing ->
-              mempty
-      runDiscordInputThread = do
-        liftIO $
-          Discord.runDiscord
-            Discord.def
-              { discordToken = discordApiToken,
-                discordOnStart =
-                  onStart handleReference $
-                    runRIO logFunction $
-                      discordLog "Started reading messages",
-                discordOnEvent = onEvent eventQueue
-              }
+          maybeEvent <- atomically $ decodeCommand <$> readTQueue appDiscordEvents
+          for_ maybeEvent (handleCommand >>> runRIO applicationState)
+      discordOnStart =
+        onStart appDiscordHandle $ runRIO appLogFunc $ discordLog "Started reading messages"
+      discordOnEvent = onEvent appDiscordEvents
+      runDiscordInputThread =
+        liftIO $ Discord.runDiscord Discord.def {discordToken, discordOnStart, discordOnEvent}
   (discordResult, ()) <-
     liftIO $
       concurrently runDiscordInputThread $
