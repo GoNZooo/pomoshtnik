@@ -23,7 +23,15 @@ import Discord.Types
 import Import
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Pomoshtnik.Database as Database
-import Pomoshtnik.Discord (onEvent, onStart, replyTo)
+import Pomoshtnik.Discord
+  ( argumentsAsText,
+    onEvent,
+    onStart,
+    oneArgument,
+    oneArgumentAndText,
+    replyTo,
+    twoArguments,
+  )
 import qualified Pomoshtnik.SevernataZvezda as SevernataZvezda
 import qualified Pomoshtnik.TMDB as TMDB
 import Pomoshtnik.TMDB.Types
@@ -75,161 +83,65 @@ run = do
   logErrorS "Discord" $ display discordResult
 
 decodeCommand :: Event -> Maybe IncomingCommand
-decodeCommand
-  ( MessageCreate
-      Message
-        { messageText = text,
-          messageAuthor = author,
-          messageChannel =
-            channelId'
-        }
-    )
-    | text == "!generate-token" =
-      Just $ IncomingCommand {channelId = channelId', user = author, command = GenerateToken}
-    | text == "!authenticated" =
-      Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
-    | text `startsWith` "!login " =
-      case Text.words text of
-        _ : [token] -> do
-          uuid <- UUID.fromText token
-          pure IncomingCommand {channelId = channelId', user = author, command = Login uuid}
-        _ -> Nothing
-    | text `startsWith` "!movie " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = SearchMovie $ MovieTitle $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!movie-candidates " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = SearchMovieCandidates $ MovieTitle $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!movie-by-id " =
-      case Text.words text of
-        _ : rest -> do
-          movieId <- fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
-          pure IncomingCommand {channelId = channelId', user = author, command = GetMovie movieId}
-        _ -> Nothing
-    | text `startsWith` "!show " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = SearchShow $ ShowTitle $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!show-candidates " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = SearchShowCandidates $ ShowTitle $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!show-by-id " =
-      case Text.words text of
-        _ : [idText] -> do
-          showId <- fmap ShowId $ readMaybe $ Text.unpack idText
-          pure IncomingCommand {channelId = channelId', user = author, command = GetShow showId}
-        _ -> Nothing
-    | text `startsWith` "!person " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = SearchPerson $ PersonName $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!add-note " =
-      case Text.words text of
-        _ : title' : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = AddNote title' $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!remove-note " =
-      case Text.words text of
-        _ : [title'] ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command =
-                  RemoveNoteByTitle title'
-              }
-        _ -> Nothing
-    | text `startsWith` "!remove-all-notes " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = RemoveNoteByFullTextSearch $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!update-note " =
-      case Text.words text of
-        _ : title' : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = UpdateNote title' $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!search-note " =
-      case Text.words text of
-        _ : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = FullTextSearchNote $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!add-to-note " =
-      case Text.words text of
-        _ : title' : rest ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command = AddToNote title' $ Text.unwords rest
-              }
-        _ -> Nothing
-    | text `startsWith` "!authenticate-external " =
-      case Text.words text of
-        _ : [username', challengeText] ->
-          Just $
-            IncomingCommand
-              { channelId = channelId',
-                user = author,
-                command =
-                  AuthenticateExternal (AuthenticationUsername username') $
-                    AuthenticationChallenge challengeText
-              }
-        _ -> Nothing
-    | otherwise = Nothing
+decodeCommand (MessageCreate message@Message {messageText, messageAuthor, messageChannel})
+  | messageText == "!generate-token" =
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command = GenerateToken}
+  | messageText == "!authenticated" =
+    let command = AuthenticatedUsers
+     in pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!login " = do
+    command <- Login <$> (oneArgument message >>= UUID.fromText)
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!movie " = do
+    command <- (MovieTitle >>> SearchMovie) <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!movie-candidates " = do
+    command <- (MovieTitle >>> SearchMovieCandidates) <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!movie-by-id " = do
+    idText <- argumentsAsText message
+    command <- (MovieId >>> GetMovie) <$> (idText & Text.unpack & readMaybe)
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!show " = do
+    command <- (ShowTitle >>> SearchShow) <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!show-candidates " = do
+    command <- (ShowTitle >>> SearchShowCandidates) <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!show-by-id " = do
+    command <- (ShowId >>> GetShow) <$> (oneArgument message >>= readMaybe . Text.unpack)
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!person " = do
+    command <- (PersonName >>> SearchPerson) <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!add-note " = do
+    (title, body) <- oneArgumentAndText message
+    let command = AddNote title body
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!remove-note " = do
+    command <- RemoveNoteByTitle <$> oneArgument message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!remove-all-notes " = do
+    command <- RemoveNoteByFullTextSearch <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!update-note " = do
+    (title, body) <- oneArgumentAndText message
+    let command = UpdateNote title body
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!search-note " = do
+    command <- FullTextSearchNote <$> argumentsAsText message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!add-to-note " = do
+    (title, addition) <- oneArgumentAndText message
+    let command = AddToNote title addition
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!authenticate-external " = do
+    (username, challengeText) <- twoArguments message
+    let command =
+          AuthenticateExternal (AuthenticationUsername username) $
+            AuthenticationChallenge challengeText
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | otherwise = Nothing
 decodeCommand _ = Nothing
 
 handleCommand ::

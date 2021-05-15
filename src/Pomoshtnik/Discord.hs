@@ -5,6 +5,10 @@ module Pomoshtnik.Discord
   ( onEvent,
     onStart,
     replyTo,
+    oneArgument,
+    twoArguments,
+    oneArgumentAndText,
+    argumentsAsText,
   )
 where
 
@@ -15,9 +19,13 @@ import Discord.Types
   ( ChannelId,
     CreateEmbed (..),
     Event (..),
+    Message (..),
     User (..),
   )
 import Import
+import qualified RIO.List as List
+import qualified RIO.NonEmpty as NonEmpty
+import qualified RIO.Text as Text
 
 -- | When supplied as the `onStart` for `Discord.runDiscord` will pull out the active discord handle
 -- and fill the ref with it. This allows us to use the handle in another thread outside of the
@@ -66,3 +74,39 @@ replyTo' channelId' user' text Nothing =
 replyTo' channelId' user' text (Just embed) =
   let messageText' = mconcat [mention user', maybe "" (" " <>) text]
    in void $ Discord.restCall $ CreateMessageEmbed channelId' messageText' embed
+
+-- | Returns the first argument in a message if there are any, `Nothing` otherwise.
+oneArgument :: Message -> Maybe Text
+oneArgument Message {messageText} = restWords messageText >>= List.headMaybe
+
+-- | Returns the first two arguments in a mesage if there are any, `Nothing` otherwise.
+twoArguments :: Message -> Maybe (Text, Text)
+twoArguments Message {messageText} = do
+  restWords' <- restWords messageText
+  case restWords' of
+    firstArgument : secondArgument : _ -> pure (firstArgument, secondArgument)
+    _otherwise -> Nothing
+
+-- | Returns the first argument and the concatenation of the rest in a message,
+-- `Nothing` if there is no first argument.
+oneArgumentAndText :: Message -> Maybe (Text, Text)
+oneArgumentAndText Message {messageText} = do
+  restWords' <- restWords messageText
+  case restWords' of
+    firstArgument : rest -> pure (firstArgument, Text.unwords rest)
+    _otherwise -> Nothing
+
+-- | Returns the concatenation of every argument in a message if there are any, `Nothing` otherwise.
+argumentsAsText :: Message -> Maybe Text
+argumentsAsText Message {messageText} = Text.unwords <$> restWords messageText
+
+-- | Takes a text and returns a maybe signifying whether or not the text has words in it. This can
+-- be useful in order to use it in a monadic `Maybe` context.
+nonEmptyWords :: Text -> Maybe (NonEmpty Text)
+nonEmptyWords text = case Text.words text of
+  w : rest -> pure $ w :| rest
+  [] -> Nothing
+
+-- | Returns every word except the first in a `Text` if there are any, `Nothing` otherwise.
+restWords :: Text -> Maybe [Text]
+restWords text = NonEmpty.tail <$> nonEmptyWords text
