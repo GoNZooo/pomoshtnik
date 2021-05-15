@@ -105,17 +105,9 @@ decodeCommand
       Just $ IncomingCommand {channelId = channelId', user = author, command = AuthenticatedUsers}
     | text `startsWith` "!login " =
       case Text.words text of
-        _ : [token] ->
-          case UUID.fromText token of
-            Just uuid ->
-              Just $
-                IncomingCommand
-                  { channelId = channelId',
-                    user = author,
-                    command =
-                      Login uuid
-                  }
-            Nothing -> Nothing
+        _ : [token] -> do
+          uuid <- UUID.fromText token
+          pure IncomingCommand {channelId = channelId', user = author, command = Login uuid}
         _ -> Nothing
     | text `startsWith` "!movie " =
       case Text.words text of
@@ -139,18 +131,9 @@ decodeCommand
         _ -> Nothing
     | text `startsWith` "!movie-by-id " =
       case Text.words text of
-        _ : rest ->
-          let maybeId = fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
-           in case maybeId of
-                Just movieId ->
-                  Just $
-                    IncomingCommand
-                      { channelId = channelId',
-                        user = author,
-                        command =
-                          GetMovie movieId
-                      }
-                Nothing -> Nothing
+        _ : rest -> do
+          movieId <- fmap MovieId $ readMaybe $ Text.unpack $ Text.concat rest
+          pure IncomingCommand {channelId = channelId', user = author, command = GetMovie movieId}
         _ -> Nothing
     | text `startsWith` "!show " =
       case Text.words text of
@@ -174,18 +157,9 @@ decodeCommand
         _ -> Nothing
     | text `startsWith` "!show-by-id " =
       case Text.words text of
-        _ : [idText] ->
-          let maybeId = fmap ShowId $ readMaybe $ Text.unpack idText
-           in case maybeId of
-                Just showId ->
-                  Just $
-                    IncomingCommand
-                      { channelId = channelId',
-                        user = author,
-                        command =
-                          GetShow showId
-                      }
-                Nothing -> Nothing
+        _ : [idText] -> do
+          showId <- fmap ShowId $ readMaybe $ Text.unpack idText
+          pure IncomingCommand {channelId = channelId', user = author, command = GetShow showId}
         _ -> Nothing
     | text `startsWith` "!person " =
       case Text.words text of
