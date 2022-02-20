@@ -1,4 +1,4 @@
-FROM fpco/stack-build:lts-16.31 as dependencies
+FROM fpco/stack-build:lts-18.14 as dependencies
 RUN mkdir /opt/build
 WORKDIR /opt/build
 
@@ -13,7 +13,7 @@ COPY stack.yaml package.yaml stack.yaml.lock /opt/build/
 RUN stack build --system-ghc --dependencies-only
 
 # -------------------------------------------------------------------------------------------
-FROM fpco/stack-build:lts-16.31 as build
+FROM fpco/stack-build:lts-18.14 as build
 
 # Copy compiled dependencies from previous stage
 COPY --from=dependencies /root/.stack /root/.stack
@@ -30,7 +30,7 @@ FROM ubuntu:20.10 as app
 RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
-COPY --from=dependencies /opt/build/libgmp.deb /opt/build/ca-certificates.deb /opt/build/openssl.deb /tmp
+COPY --from=dependencies /opt/build/libgmp.deb /opt/build/ca-certificates.deb /opt/build/openssl.deb /tmp/
 RUN dpkg -i /tmp/libgmp.deb && rm /tmp/libgmp.deb
 # for HTTPS
 RUN dpkg -i /tmp/openssl.deb && rm /tmp/openssl.deb
