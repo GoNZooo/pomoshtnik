@@ -29,10 +29,10 @@ data ConfigurationData = ConfigurationData
   deriving (Eq, Show, Generic)
 
 instance FromJSON ConfigurationData where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON ConfigurationData where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data CastEntry = CastEntry
   { character :: Text,
@@ -45,10 +45,10 @@ data CastEntry = CastEntry
   deriving (Eq, Show, Generic)
 
 instance FromJSON CastEntry where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON CastEntry where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data CrewEntry = CrewEntry
   { creditId :: Text,
@@ -61,10 +61,10 @@ data CrewEntry = CrewEntry
   deriving (Eq, Show, Generic)
 
 instance FromJSON CrewEntry where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON CrewEntry where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data Credits = Credits
   { id :: Maybe Int,
@@ -74,10 +74,10 @@ data Credits = Credits
   deriving (Eq, Show, Generic)
 
 instance FromJSON Credits where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON Credits where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data Movie = Movie
   { posterPath :: Maybe Text,
@@ -92,10 +92,10 @@ data Movie = Movie
   deriving (Eq, Show, Generic)
 
 instance FromJSON Movie where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON Movie where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data Episode = Episode
   { airDate :: Text,
@@ -111,10 +111,10 @@ data Episode = Episode
   deriving (Eq, Show, Generic)
 
 instance FromJSON Episode where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON Episode where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data ExternalIds = ExternalIds
   { imdbId :: Maybe Text,
@@ -126,10 +126,10 @@ data ExternalIds = ExternalIds
   deriving (Eq, Show, Generic)
 
 instance FromJSON ExternalIds where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON ExternalIds where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data Season = Season
   { airDate :: Maybe Text,
@@ -142,10 +142,10 @@ data Season = Season
   deriving (Eq, Show, Generic)
 
 instance FromJSON Season where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON Season where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data TVShow = TVShow
   { posterPath :: Maybe Text,
@@ -163,10 +163,10 @@ data TVShow = TVShow
   deriving (Eq, Show, Generic)
 
 instance FromJSON TVShow where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON TVShow where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data Person = Person
   { popularity :: Float,
@@ -179,10 +179,10 @@ data Person = Person
   deriving (Eq, Show, Generic)
 
 instance FromJSON Person where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON Person where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data PersonCandidate = PersonCandidate
   { popularity :: Float,
@@ -195,10 +195,10 @@ data PersonCandidate = PersonCandidate
   deriving (Eq, Show, Generic)
 
 instance FromJSON PersonCandidate where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON PersonCandidate where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data KnownForMovieData = KnownForMovieData
   { posterPath :: Maybe Text,
@@ -211,10 +211,10 @@ data KnownForMovieData = KnownForMovieData
   deriving (Eq, Show, Generic)
 
 instance FromJSON KnownForMovieData where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON KnownForMovieData where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data KnownForShowData = KnownForShowData
   { posterPath :: Maybe Text,
@@ -227,10 +227,10 @@ data KnownForShowData = KnownForShowData
   deriving (Eq, Show, Generic)
 
 instance FromJSON KnownForShowData where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON KnownForShowData where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data KnownFor
   = KnownForMovie KnownForMovieData
@@ -274,10 +274,10 @@ data PersonSearchResult = PersonSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromJSON PersonSearchResult where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON PersonSearchResult where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data MovieSearchResult = MovieSearchResult
   { page :: Int,
@@ -287,10 +287,10 @@ data MovieSearchResult = MovieSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromJSON MovieSearchResult where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON MovieSearchResult where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data MovieCandidate = MovieCandidate
   { posterPath :: Maybe String,
@@ -303,10 +303,10 @@ data MovieCandidate = MovieCandidate
   deriving (Eq, Show, Generic)
 
 instance FromJSON MovieCandidate where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON MovieCandidate where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data ShowCandidate = ShowCandidate
   { posterPath :: Maybe String,
@@ -319,10 +319,10 @@ data ShowCandidate = ShowCandidate
   deriving (Eq, Show, Generic)
 
 instance FromJSON ShowCandidate where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON ShowCandidate where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions
 
 data ShowSearchResult = ShowSearchResult
   { page :: Int,
@@ -332,7 +332,7 @@ data ShowSearchResult = ShowSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromJSON ShowSearchResult where
-  parseJSON value = Aeson.genericParseJSON recordOptions value
+  parseJSON = Aeson.genericParseJSON recordOptions
 
 instance ToJSON ShowSearchResult where
-  toJSON value = Aeson.genericToJSON recordOptions value
+  toJSON = Aeson.genericToJSON recordOptions

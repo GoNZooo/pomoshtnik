@@ -203,10 +203,10 @@ data ImageConfigurationData = ImageConfigurationData
   deriving (Eq, Show, Generic)
 
 instance FromJSON ImageConfigurationData where
-  parseJSON value = JSON.genericParseJSON recordOptions value
+  parseJSON = JSON.genericParseJSON recordOptions
 
 instance ToJSON ImageConfigurationData where
-  toJSON value = JSON.genericToJSON recordOptions value
+  toJSON = JSON.genericToJSON recordOptions
 
 data PosterSize
   = PosterW92
@@ -220,10 +220,10 @@ data PosterSize
   deriving (Eq, Show, Generic)
 
 instance FromJSON PosterSize where
-  parseJSON value = JSON.genericParseJSON (enumerationOptions "Poster") value
+  parseJSON = JSON.genericParseJSON (enumerationOptions "Poster")
 
 instance ToJSON PosterSize where
-  toJSON value = JSON.genericToJSON (enumerationOptions "Poster") value
+  toJSON = JSON.genericToJSON (enumerationOptions "Poster")
 
 data ProfileSize
   = ProfileW45
@@ -234,10 +234,10 @@ data ProfileSize
   deriving (Eq, Show, Generic)
 
 instance FromJSON ProfileSize where
-  parseJSON value = JSON.genericParseJSON (enumerationOptions "Profile") value
+  parseJSON = JSON.genericParseJSON (enumerationOptions "Profile")
 
 instance ToJSON ProfileSize where
-  toJSON value = JSON.genericToJSON (enumerationOptions "Profile") value
+  toJSON = JSON.genericToJSON (enumerationOptions "Profile")
 
 data StillSize
   = StillW92
@@ -248,10 +248,10 @@ data StillSize
   deriving (Eq, Show, Generic)
 
 instance FromJSON StillSize where
-  parseJSON value = JSON.genericParseJSON (enumerationOptions "Still") value
+  parseJSON = JSON.genericParseJSON (enumerationOptions "Still")
 
 instance ToJSON StillSize where
-  toJSON value = JSON.genericToJSON (enumerationOptions "Still") value
+  toJSON = JSON.genericToJSON (enumerationOptions "Still")
 
 data BackdropSize
   = BackdropW300
@@ -261,10 +261,10 @@ data BackdropSize
   deriving (Eq, Show, Generic)
 
 instance FromJSON BackdropSize where
-  parseJSON value = JSON.genericParseJSON (enumerationOptions "Backdrop") value
+  parseJSON = JSON.genericParseJSON (enumerationOptions "Backdrop")
 
 instance ToJSON BackdropSize where
-  toJSON value = JSON.genericToJSON (enumerationOptions "Backdrop") value
+  toJSON = JSON.genericToJSON (enumerationOptions "Backdrop")
 
 enumerationOptions :: String -> JSON.Options
 enumerationOptions prefix =
