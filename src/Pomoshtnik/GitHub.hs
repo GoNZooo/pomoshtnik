@@ -6,8 +6,24 @@ import Qtility
 import qualified RIO.Text as Text
 import Types hiding (Options)
 
-getGitHubUserIO :: (MonadIO m, MonadThrow m) => Manager -> Username -> m GitHubUser
-getGitHubUserIO manager' username = do
+class (Monad m) => GitHub m where
+  getGitHubUser :: Username -> m GitHubUser
+  getGitHubUserRepositories :: Username -> m [GitHubRepository]
+  getGitHubRepository :: Username -> RepositoryName -> m GitHubRepository
+
+instance GitHub (RIO App) where
+  getGitHubUser username = do
+    manager' <- view tlsConnectionManagerL
+    getGitHubUserIO manager' username
+  getGitHubUserRepositories username = do
+    manager' <- view tlsConnectionManagerL
+    getGitHubUserRepositoriesIO manager' username
+  getGitHubRepository username repositoryName = do
+    manager' <- view tlsConnectionManagerL
+    getGitHubRepositoryIO manager' username repositoryName
+
+getGitHubUserIO :: (MonadIO m, MonadThrow m) => TLSConnectionManager -> Username -> m GitHubUser
+getGitHubUserIO (TLSConnectionManager manager') username = do
   let command = GitHubGetUser username
   response <- liftIO $ getWith (standardOptions manager') $ urlForCommand command
   (response ^. responseBody)
@@ -17,10 +33,10 @@ getGitHubUserIO manager' username = do
 
 getGitHubUserRepositoriesIO ::
   (MonadIO m, MonadThrow m) =>
-  Manager ->
+  TLSConnectionManager ->
   Username ->
   m [GitHubRepository]
-getGitHubUserRepositoriesIO manager' username = do
+getGitHubUserRepositoriesIO (TLSConnectionManager manager') username = do
   let command = GitHubGetUserRepositories username
       getPage page = liftIO $ getWith (optionsFor page) (urlForCommand command)
       optionsFor page =
@@ -43,11 +59,11 @@ getGitHubUserRepositoriesIO manager' username = do
 
 getGitHubRepositoryIO ::
   (MonadIO m, MonadThrow m) =>
-  Manager ->
+  TLSConnectionManager ->
   Username ->
   RepositoryName ->
   m GitHubRepository
-getGitHubRepositoryIO manager' username repositoryName = do
+getGitHubRepositoryIO (TLSConnectionManager manager') username repositoryName = do
   let command = GitHubGetRepository username repositoryName
   response <- liftIO $ getWith (standardOptions manager') $ urlForCommand command
   (response ^. responseBody)

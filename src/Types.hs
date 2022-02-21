@@ -20,7 +20,7 @@ import RIO.Process
 import qualified RIO.Text as Text
 import qualified Text.Inflections as Inflections
 
-newtype TLSConnectionManager = TLSConnectionManager Manager
+newtype TLSConnectionManager = TLSConnectionManager {unTlsConnectionManager :: Manager}
 
 newtype TMDBAPIKey = TMDBAPIKey {unTMDBAPIKey :: String}
 
