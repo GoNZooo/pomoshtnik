@@ -293,8 +293,7 @@ handleCommandForUser (Just _) IncomingCommand {command = AuthenticateExternal _ 
 handleCommandForUser
   (Just (Entity userId _))
   IncomingCommand {channelId, user, command = AddNote noteTitle noteBody} = do
-    let note = Database.Note {noteTitle, noteBody, noteUserId = userId}
-    maybeNoteId <- Database.addNoteM note
+    maybeNoteId <- Database.addNoteM Database.Note {noteTitle, noteBody, noteUserId = userId}
     case maybeNoteId of
       Just (Database.NoteKey (SqlBackendKey noteId)) ->
         replyTo channelId user (Just $ "Note added with ID: " <> tshow noteId) Nothing
@@ -339,8 +338,8 @@ handleCommandForUser
 handleCommandForUser
   (Just (Entity userId _))
   IncomingCommand {channelId, user, command = UpdateNote noteTitle noteBody} = do
-    let note = Database.Note {noteTitle, noteBody, noteUserId = userId}
-    Database.updateNoteM note
+    let note' = Database.Note {noteTitle, noteBody, noteUserId = userId}
+    Database.updateNoteM note'
     replyTo channelId user (Just "Note updated.") Nothing
 handleCommandForUser
   (Just (Entity userId _))

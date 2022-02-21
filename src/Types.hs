@@ -1,10 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Types where
 
-import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as JSON
 import qualified Data.List as List
 import Data.Pool (Pool)
@@ -37,20 +36,23 @@ newtype ShowTitle = ShowTitle {unShowTitle :: Text} deriving (Eq, Show, FromJSON
 
 newtype ShowId = ShowId {unShowId :: Int} deriving (Eq, Show, FromJSON, ToJSON)
 
-newtype Username = Username Text
+newtype Username = Username {unUsername :: Text}
   deriving (Eq, Ord, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
 
-newtype AuthenticationUsername = AuthenticationUsername Text
+newtype AuthenticationUsername = AuthenticationUsername {unAuthenticationUsername :: Text}
   deriving (Eq, Ord, Show, FromJSON, ToJSON, Persist.PersistField, Sql.PersistFieldSql)
 
-newtype AuthenticationChallenge = AuthenticationChallenge Text
+newtype AuthenticationChallenge = AuthenticationChallenge {unAuthenticationChallenge :: Text}
   deriving (Eq, Show, FromJSON, ToJSON)
 
-newtype ExternalAuthenticationUrl = ExternalAuthenticationUrl String
+newtype ExternalAuthenticationUrl = ExternalAuthenticationUrl {unExternalAuthenticationUrl :: String}
   deriving (Eq, Show, FromJSON, ToJSON)
 
-newtype ExternalAuthenticationToken = ExternalAuthenticationToken Text
+newtype ExternalAuthenticationToken = ExternalAuthenticationToken {unExternalAuthenticationToken :: Text}
   deriving (Eq, Show, FromJSON, ToJSON)
+
+newtype RepositoryName = RepositoryName {unRepositoryName :: Text}
+  deriving (Eq, Ord, Show, FromJSON, ToJSON)
 
 -- | Command line arguments
 newtype Options = Options
@@ -186,6 +188,13 @@ data Command
   | UpdateNote Text Text
   | FullTextSearchNote Text
   | AuthenticateExternal AuthenticationUsername AuthenticationChallenge
+  | GitHubCommand GitHubCommandType
+  deriving (Eq, Show)
+
+data GitHubCommandType
+  = GitHubGetUser Username
+  | GitHubGetUserRepositories Username
+  | GitHubGetRepository Username RepositoryName
   deriving (Eq, Show)
 
 data OutgoingDiscordEvent
@@ -266,6 +275,34 @@ instance FromJSON BackdropSize where
 instance ToJSON BackdropSize where
   toJSON = JSON.genericToJSON (enumerationOptions "Backdrop")
 
+data GitHubUser = GitHubUser
+  { _gitHubUserId :: !Int,
+    _gitHubUserLogin :: !Text,
+    _gitHubUserAvatarUrl :: !Url,
+    _gitHubUserGistsUrl :: !Url,
+    _gitHubUserOrganizationsUrl :: !Url,
+    _gitHubUserReposUrl :: !Url,
+    _gitHubUserType :: !Text,
+    _gitHubUserSiteAdmin :: !Bool
+  }
+  deriving (Eq, Show, Generic)
+
+data GitHubRepository = GitHubRepository
+  { _gitHubRepositoryFullName :: !Text,
+    _gitHubRepositoryOwner :: !GitHubUser,
+    _gitHubRepositoryName :: !Text,
+    _gitHubRepositoryDescription :: !(Maybe Text)
+  }
+  deriving (Eq, Show, Generic)
+
+newtype Url = Url {_unUrl :: String}
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+data GitHubDecodingError = GitHubDecodingError !GitHubCommandType !String
+  deriving (Eq, Show, Generic)
+
+instance Exception GitHubDecodingError
+
 enumerationOptions :: String -> JSON.Options
 enumerationOptions prefix =
   JSON.defaultOptions
@@ -287,3 +324,13 @@ camelCase [] = []
 camelCaseToSnakeCase :: String -> String
 camelCaseToSnakeCase string =
   either (const string) Text.unpack $ Inflections.toUnderscore (Text.pack string)
+
+camelToSnakeCaseOptions :: String -> AesonOptions
+camelToSnakeCaseOptions prefix =
+  defaultAesonOptions
+    { JSON.fieldLabelModifier = drop (1 + length prefix) >>> camelCaseToSnakeCase
+    }
+
+foldMapM makeWrapped [''Url]
+
+foldMapM (deriveJSON' 'camelToSnakeCaseOptions) [''GitHubUser, ''GitHubRepository]
