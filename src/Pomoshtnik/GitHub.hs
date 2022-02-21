@@ -6,19 +6,23 @@ import Qtility
 import qualified RIO.Text as Text
 import Types hiding (Options)
 
-getGitHubUser :: Manager -> Username -> IO GitHubUser
-getGitHubUser manager' username = do
+getGitHubUserIO :: (MonadIO m, MonadThrow m) => Manager -> Username -> m GitHubUser
+getGitHubUserIO manager' username = do
   let command = GitHubGetUser username
-  response <- getWith (standardOptions manager') $ urlForCommand command
+  response <- liftIO $ getWith (standardOptions manager') $ urlForCommand command
   (response ^. responseBody)
     & eitherDecode
     & mapLeft (GitHubDecodingError command)
     & fromEither
 
-getGitHubUserRepositories :: Manager -> Username -> IO [GitHubRepository]
-getGitHubUserRepositories manager' username = do
+getGitHubUserRepositoriesIO ::
+  (MonadIO m, MonadThrow m) =>
+  Manager ->
+  Username ->
+  m [GitHubRepository]
+getGitHubUserRepositoriesIO manager' username = do
   let command = GitHubGetUserRepositories username
-      getPage page = getWith (optionsFor page) (urlForCommand command)
+      getPage page = liftIO $ getWith (optionsFor page) (urlForCommand command)
       optionsFor page =
         standardOptions manager'
           & param "per_page" .~ ["100"]
@@ -37,10 +41,15 @@ getGitHubUserRepositories manager' username = do
 
   getAllPages 1
 
-getGitHubRepository :: Manager -> Username -> RepositoryName -> IO GitHubRepository
-getGitHubRepository manager' username repositoryName = do
+getGitHubRepositoryIO ::
+  (MonadIO m, MonadThrow m) =>
+  Manager ->
+  Username ->
+  RepositoryName ->
+  m GitHubRepository
+getGitHubRepositoryIO manager' username repositoryName = do
   let command = GitHubGetRepository username repositoryName
-  response <- getWith (standardOptions manager') $ urlForCommand command
+  response <- liftIO $ getWith (standardOptions manager') $ urlForCommand command
   (response ^. responseBody)
     & eitherDecode
     & mapLeft (GitHubDecodingError command)
