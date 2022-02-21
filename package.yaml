@@ -41,6 +41,7 @@ dependencies:
 - monad-logger
 - qtility
 - wreq
+- lens
 
 ghc-options:
   - -Wall

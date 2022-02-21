@@ -181,14 +181,18 @@ data Command
   | SearchShowCandidates ShowTitle
   | GetShow ShowId
   | SearchPerson PersonName
-  | AddNote Text Text
+  | NoteCommand NoteCommandType
+  | AuthenticateExternal AuthenticationUsername AuthenticationChallenge
+  | GitHubCommand GitHubCommandType
+  deriving (Eq, Show)
+
+data NoteCommandType
+  = AddNote Text Text
   | AddToNote Text Text
   | RemoveNoteByTitle Text
   | RemoveNoteByFullTextSearch Text
   | UpdateNote Text Text
   | FullTextSearchNote Text
-  | AuthenticateExternal AuthenticationUsername AuthenticationChallenge
-  | GitHubCommand GitHubCommandType
   deriving (Eq, Show)
 
 data GitHubCommandType
@@ -291,7 +295,8 @@ data GitHubRepository = GitHubRepository
   { _gitHubRepositoryFullName :: !Text,
     _gitHubRepositoryOwner :: !GitHubUser,
     _gitHubRepositoryName :: !Text,
-    _gitHubRepositoryDescription :: !(Maybe Text)
+    _gitHubRepositoryDescription :: !(Maybe Text),
+    _gitHubRepositoryLanguage :: !(Maybe Text)
   }
   deriving (Eq, Show, Generic)
 
@@ -332,5 +337,7 @@ camelToSnakeCaseOptions prefix =
     }
 
 foldMapM makeWrapped [''Url]
+
+foldMapM makeLenses [''GitHubUser, ''GitHubRepository]
 
 foldMapM (deriveJSON' 'camelToSnakeCaseOptions) [''GitHubUser, ''GitHubRepository]

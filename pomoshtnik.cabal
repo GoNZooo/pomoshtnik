@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b79515ff4bf184ff6f8e150dd8da9008591cb3d2019249ee81a6ae0bc5b1f67e
+-- hash: db1541af68b1aaab448adbd41c794374c123019e49e27d9305c0fd62184db43d
 
 name:           pomoshtnik
 version:        0.1.0.0
@@ -94,6 +94,7 @@ library
     , http-client-tls
     , http-types
     , inflections
+    , lens
     , monad-logger
     , persistent
     , persistent-sqlite
@@ -170,6 +171,7 @@ executable pomoshtnik-exe
     , http-client-tls
     , http-types
     , inflections
+    , lens
     , monad-logger
     , optparse-simple
     , persistent
@@ -251,6 +253,7 @@ test-suite pomoshtnik-test
     , http-client-tls
     , http-types
     , inflections
+    , lens
     , monad-logger
     , persistent
     , persistent-sqlite
