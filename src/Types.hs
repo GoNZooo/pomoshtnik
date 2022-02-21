@@ -15,7 +15,7 @@ import qualified Database.Persist.Sql as Sql
 import Discord (DiscordHandle)
 import Discord.Types (ChannelId, CreateEmbed, Event, User)
 import Network.HTTP.Client (Manager)
-import RIO
+import Qtility
 import qualified RIO.Char as Char
 import RIO.Process
 import qualified RIO.Text as Text
@@ -274,9 +274,6 @@ enumerationOptions prefix =
 
 recordOptions :: JSON.Options
 recordOptions = JSON.defaultOptions {JSON.fieldLabelModifier = camelCaseToSnakeCase}
-
-identity :: a -> a
-identity = RIO.id
 
 removePrefix :: String -> String -> String
 removePrefix prefix string = maybe string identity $ List.stripPrefix prefix string

@@ -18,6 +18,19 @@ packages:
       sha256: 3c9b61962ffe49490c19861c85da44cf0e9966f8cb1f673d39541adf7d839885
   original:
     hackage: discord-haskell-1.8.3
+- completed:
+    size: 40251
+    subdir: qtility
+    url: https://github.com/quanterall/qtility/archive/f551c230d649746efdffabb0170fa8c53f7c5d98.tar.gz
+    name: qtility
+    version: 0.0.0
+    sha256: eee1b47a6ee8af656473c175da7a3bda67111068b1b40ad8cfac2360d2a72611
+    pantry-tree:
+      size: 1296
+      sha256: 37d615d7a35e47d5c5930a4cef8592fcc859453a228812f45fd05fef5f4c5a5e
+  original:
+    subdir: qtility
+    url: https://github.com/quanterall/qtility/archive/f551c230d649746efdffabb0170fa8c53f7c5d98.tar.gz
 snapshots:
 - completed:
     size: 586069

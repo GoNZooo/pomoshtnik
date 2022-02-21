@@ -19,26 +19,28 @@ extra-source-files:
 description: Please see the README on Github at <https://github.com/githubuser/discord-sandbox#readme>
 
 dependencies:
-  - base >= 4.11 && < 10
-  - rio >= 0.1.12.0
-  - discord-haskell
-  - emoji
-  - uuid
-  - yesod-core
-  - yesod-form
-  - wai
-  - warp
-  - aeson
-  - inflections
-  - http-client
-  - http-client-tls
-  - http-types
-  - unordered-containers
-  - persistent
-  - persistent-sqlite
-  - persistent-template
-  - resource-pool
-  - monad-logger
+- base >= 4.11 && < 10
+- rio >= 0.1.12.0
+- discord-haskell
+- emoji
+- uuid
+- yesod-core
+- yesod-form
+- wai
+- warp
+- aeson
+- inflections
+- http-client
+- http-client-tls
+- http-types
+- unordered-containers
+- persistent
+- persistent-sqlite
+- persistent-template
+- resource-pool
+- monad-logger
+- qtility
+- wreq
 
 ghc-options:
   - -Wall
@@ -64,6 +66,7 @@ default-extensions:
 - DeriveLift
 - DerivingStrategies
 - DoAndIfThenElse
+- DuplicateRecordFields
 - EmptyDataDecls
 - EmptyCase
 - ExistentialQuantification

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 25c0c355bd5c466864c16bdc345090e88e3d7692d981c56b3b61634d57453ed6
+-- hash: b79515ff4bf184ff6f8e150dd8da9008591cb3d2019249ee81a6ae0bc5b1f67e
 
 name:           pomoshtnik
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
       Import
       Pomoshtnik.Database
       Pomoshtnik.Discord
+      Pomoshtnik.GitHub
       Pomoshtnik.SevernataZvezda
       Pomoshtnik.TMDB
       Pomoshtnik.TMDB.Types
@@ -54,6 +55,7 @@ library
       DeriveLift
       DerivingStrategies
       DoAndIfThenElse
+      DuplicateRecordFields
       EmptyDataDecls
       EmptyCase
       ExistentialQuantification
@@ -96,12 +98,14 @@ library
     , persistent
     , persistent-sqlite
     , persistent-template
+    , qtility
     , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
     , uuid
     , wai
     , warp
+    , wreq
     , yesod-core
     , yesod-form
   default-language: Haskell2010
@@ -127,6 +131,7 @@ executable pomoshtnik-exe
       DeriveLift
       DerivingStrategies
       DoAndIfThenElse
+      DuplicateRecordFields
       EmptyDataDecls
       EmptyCase
       ExistentialQuantification
@@ -171,12 +176,14 @@ executable pomoshtnik-exe
     , persistent-sqlite
     , persistent-template
     , pomoshtnik
+    , qtility
     , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
     , uuid
     , wai
     , warp
+    , wreq
     , yesod-core
     , yesod-form
   default-language: Haskell2010
@@ -204,6 +211,7 @@ test-suite pomoshtnik-test
       DeriveLift
       DerivingStrategies
       DoAndIfThenElse
+      DuplicateRecordFields
       EmptyDataDecls
       EmptyCase
       ExistentialQuantification
@@ -248,12 +256,14 @@ test-suite pomoshtnik-test
     , persistent-sqlite
     , persistent-template
     , pomoshtnik
+    , qtility
     , resource-pool
     , rio >=0.1.12.0
     , unordered-containers
     , uuid
     , wai
     , warp
+    , wreq
     , yesod-core
     , yesod-form
   default-language: Haskell2010
