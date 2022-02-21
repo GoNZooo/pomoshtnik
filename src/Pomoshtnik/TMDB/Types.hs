@@ -6,8 +6,6 @@
 
 module Pomoshtnik.TMDB.Types where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), (.:), (.=))
-import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HashMap
 import Import
 
@@ -29,10 +27,10 @@ data ConfigurationData = ConfigurationData
   deriving (Eq, Show, Generic)
 
 instance FromJSON ConfigurationData where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON ConfigurationData where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data CastEntry = CastEntry
   { character :: Text,
@@ -45,10 +43,10 @@ data CastEntry = CastEntry
   deriving (Eq, Show, Generic)
 
 instance FromJSON CastEntry where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON CastEntry where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data CrewEntry = CrewEntry
   { creditId :: Text,
@@ -61,10 +59,10 @@ data CrewEntry = CrewEntry
   deriving (Eq, Show, Generic)
 
 instance FromJSON CrewEntry where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON CrewEntry where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data Credits = Credits
   { id :: Maybe Int,
@@ -74,10 +72,10 @@ data Credits = Credits
   deriving (Eq, Show, Generic)
 
 instance FromJSON Credits where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON Credits where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data Movie = Movie
   { posterPath :: Maybe Text,
@@ -92,10 +90,10 @@ data Movie = Movie
   deriving (Eq, Show, Generic)
 
 instance FromJSON Movie where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON Movie where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data Episode = Episode
   { airDate :: Text,
@@ -111,10 +109,10 @@ data Episode = Episode
   deriving (Eq, Show, Generic)
 
 instance FromJSON Episode where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON Episode where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data ExternalIds = ExternalIds
   { imdbId :: Maybe Text,
@@ -126,10 +124,10 @@ data ExternalIds = ExternalIds
   deriving (Eq, Show, Generic)
 
 instance FromJSON ExternalIds where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON ExternalIds where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data Season = Season
   { airDate :: Maybe Text,
@@ -142,10 +140,10 @@ data Season = Season
   deriving (Eq, Show, Generic)
 
 instance FromJSON Season where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON Season where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data TVShow = TVShow
   { posterPath :: Maybe Text,
@@ -163,10 +161,10 @@ data TVShow = TVShow
   deriving (Eq, Show, Generic)
 
 instance FromJSON TVShow where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON TVShow where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data Person = Person
   { popularity :: Float,
@@ -179,10 +177,10 @@ data Person = Person
   deriving (Eq, Show, Generic)
 
 instance FromJSON Person where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON Person where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data PersonCandidate = PersonCandidate
   { popularity :: Float,
@@ -195,10 +193,10 @@ data PersonCandidate = PersonCandidate
   deriving (Eq, Show, Generic)
 
 instance FromJSON PersonCandidate where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON PersonCandidate where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data KnownForMovieData = KnownForMovieData
   { posterPath :: Maybe Text,
@@ -211,10 +209,10 @@ data KnownForMovieData = KnownForMovieData
   deriving (Eq, Show, Generic)
 
 instance FromJSON KnownForMovieData where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON KnownForMovieData where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data KnownForShowData = KnownForShowData
   { posterPath :: Maybe Text,
@@ -227,10 +225,10 @@ data KnownForShowData = KnownForShowData
   deriving (Eq, Show, Generic)
 
 instance FromJSON KnownForShowData where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON KnownForShowData where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data KnownFor
   = KnownForMovie KnownForMovieData
@@ -239,7 +237,7 @@ data KnownFor
 
 instance FromJSON KnownFor where
   parseJSON value =
-    Aeson.withObject
+    withObject
       "KnownFor"
       ( \o -> do
           mediaType :: Text <- o .: "media_type"
@@ -256,12 +254,12 @@ instance FromJSON KnownFor where
 
 instance ToJSON KnownFor where
   toJSON (KnownForMovie knownForMovieData) =
-    case (Aeson.object ["media_type" .= ("movie" :: Text)], toJSON knownForMovieData) of
+    case (object ["media_type" .= ("movie" :: Text)], toJSON knownForMovieData) of
       (Object tag, Object knownForMovieDataObject) ->
         Object $ HashMap.union tag knownForMovieDataObject
       _ -> error "tag or `knownForMovieData` did not decode into object"
   toJSON (KnownForShow knownForShowData) =
-    case (Aeson.object ["media_type" .= ("tv" :: Text)], toJSON knownForShowData) of
+    case (object ["media_type" .= ("tv" :: Text)], toJSON knownForShowData) of
       (Object tag, Object knownForShowDataObject) ->
         Object $ HashMap.union tag knownForShowDataObject
       _ -> error "tag or `knownForShowData` did not decode into object"
@@ -274,10 +272,10 @@ data PersonSearchResult = PersonSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromJSON PersonSearchResult where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON PersonSearchResult where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data MovieSearchResult = MovieSearchResult
   { page :: Int,
@@ -287,10 +285,10 @@ data MovieSearchResult = MovieSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromJSON MovieSearchResult where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON MovieSearchResult where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data MovieCandidate = MovieCandidate
   { posterPath :: Maybe String,
@@ -303,10 +301,10 @@ data MovieCandidate = MovieCandidate
   deriving (Eq, Show, Generic)
 
 instance FromJSON MovieCandidate where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON MovieCandidate where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data ShowCandidate = ShowCandidate
   { posterPath :: Maybe String,
@@ -319,10 +317,10 @@ data ShowCandidate = ShowCandidate
   deriving (Eq, Show, Generic)
 
 instance FromJSON ShowCandidate where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON ShowCandidate where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
 
 data ShowSearchResult = ShowSearchResult
   { page :: Int,
@@ -332,7 +330,7 @@ data ShowSearchResult = ShowSearchResult
   deriving (Eq, Show, Generic)
 
 instance FromJSON ShowSearchResult where
-  parseJSON = Aeson.genericParseJSON recordOptions
+  parseJSON = genericParseJSON recordOptions
 
 instance ToJSON ShowSearchResult where
-  toJSON = Aeson.genericToJSON recordOptions
+  toJSON = genericToJSON recordOptions
