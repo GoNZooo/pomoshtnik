@@ -146,6 +146,16 @@ decodeCommand (MessageCreate message@Message {messageText, messageAuthor, messag
           AuthenticateExternal (AuthenticationUsername username) $
             AuthenticationChallenge challengeText
     pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!gh-repos " = do
+    command <- (Username >>> GitHubGetUserRepositories >>> GitHubCommand) <$> oneArgument message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!gh-repo " = do
+    (username, repository) <- twoArguments message
+    let command = GitHubCommand $ GitHubGetRepository (Username username) (RepositoryName repository)
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
+  | messageText `startsWith` "!gh-user " = do
+    command <- (Username >>> GitHubGetUser >>> GitHubCommand) <$> oneArgument message
+    pure IncomingCommand {channelId = messageChannel, user = messageAuthor, command}
   | otherwise = Nothing
 decodeCommand _ = Nothing
 
