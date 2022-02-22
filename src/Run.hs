@@ -333,10 +333,12 @@ handleGitHubCommand ::
 handleGitHubCommand channelId user (GitHubGetUserRepositories username) = do
   repositories <- getGitHubUserRepositories username
   replyTo channelId user Nothing $ Just (repositoriesEmbed username repositories)
-handleGitHubCommand _channelId _user (GitHubGetUser _username) = do
-  pure ()
-handleGitHubCommand _channelId _user (GitHubGetRepository _username _repository) = do
-  pure ()
+handleGitHubCommand channelId user (GitHubGetUser username) = do
+  gitHubUser <- getGitHubUser username
+  replyTo channelId user Nothing $ Just (gitHubUserEmbed gitHubUser)
+handleGitHubCommand channelId user (GitHubGetRepository username repository) = do
+  gitHubRepository <- getGitHubRepository username repository
+  replyTo channelId user Nothing $ Just (repositoryEmbed gitHubRepository)
 
 repositoriesEmbed :: Username -> [GitHubRepository] -> CreateEmbed
 repositoriesEmbed username repositories = do
@@ -363,6 +365,22 @@ repositoriesEmbed username repositories = do
     { createEmbedTitle = "GitHub repositories",
       createEmbedDescription = "Repository statistics for " <> unUsername username,
       createEmbedFields = embedFields
+    }
+
+gitHubUserEmbed :: GitHubUser -> CreateEmbed
+gitHubUserEmbed user = do
+  Discord.def
+    { createEmbedTitle = user ^. gitHubUserLogin,
+      createEmbedDescription = fromMaybe "N/A" $ user ^. gitHubUserBio,
+      createEmbedFields = []
+    }
+
+repositoryEmbed :: GitHubRepository -> CreateEmbed
+repositoryEmbed repository = do
+  Discord.def
+    { createEmbedTitle = repository ^. gitHubRepositoryFullName,
+      createEmbedDescription = fromMaybe "N/A" $ repository ^. gitHubRepositoryDescription,
+      createEmbedFields = []
     }
 
 constructUsername :: User -> Text

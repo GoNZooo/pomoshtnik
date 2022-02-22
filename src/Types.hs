@@ -287,7 +287,8 @@ data GitHubUser = GitHubUser
     _gitHubUserOrganizationsUrl :: !Url,
     _gitHubUserReposUrl :: !Url,
     _gitHubUserType :: !Text,
-    _gitHubUserSiteAdmin :: !Bool
+    _gitHubUserSiteAdmin :: !Bool,
+    _gitHubUserBio :: !(Maybe Text)
   }
   deriving (Eq, Show, Generic)
 
