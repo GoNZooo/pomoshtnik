@@ -358,7 +358,7 @@ repositoriesEmbed username repositories = do
         repositories
           & getLanguageCounts
           & Map.toList
-          & List.sortBy (comparing snd)
+          & List.sortBy (\a b -> compare (snd b) (snd a))
           & map
             ( \(language, count) ->
                 EmbedField
