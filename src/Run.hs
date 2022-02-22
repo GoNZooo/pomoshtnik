@@ -367,9 +367,17 @@ repositoriesEmbed username repositories = do
                     embedFieldInline = Nothing
                   }
             )
+      description =
+        mconcat
+          [ "Repository statistics for [",
+            unUsername username,
+            "](https://github.com/",
+            unUsername username,
+            ")"
+          ]
   Discord.def
     { createEmbedTitle = "GitHub repositories",
-      createEmbedDescription = "Repository statistics for " <> unUsername username,
+      createEmbedDescription = description,
       createEmbedFields = embedFields
     }
 
