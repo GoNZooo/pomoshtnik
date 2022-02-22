@@ -5,8 +5,6 @@
 
 module Run (run) where
 
-import Control.Lens.Combinators (_head)
-import Control.Lens.Operators ((^?!))
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
@@ -350,23 +348,21 @@ handleGitHubCommand channelId user (GitHubGetRepository username repository) = d
   gitHubRepository <- getGitHubRepository username repository
   replyTo channelId user Nothing $ Just (repositoryEmbed gitHubRepository)
 
+getLanguageCounts :: [GitHubRepository] -> Map Text Int
+getLanguageCounts =
+  foldr (\r m -> Map.insertWith (+) (fromMaybe "N/A" $ r ^. gitHubRepositoryLanguage) 1 m) Map.empty
+
 repositoriesEmbed :: Username -> [GitHubRepository] -> CreateEmbed
 repositoriesEmbed username repositories = do
-  let languageCount =
+  let embedFields =
         repositories
-          & List.groupBy (\a b -> a ^. gitHubRepositoryLanguage == b ^. gitHubRepositoryLanguage)
-          & map
-            ( \repositories' ->
-                (repositories ^?! _head . gitHubRepositoryLanguage, length repositories')
-            )
-          & Map.fromList
-      embedFields =
-        languageCount
+          & getLanguageCounts
           & Map.toList
+          & List.sortBy (comparing snd)
           & map
             ( \(language, count) ->
                 EmbedField
-                  { embedFieldName = fromMaybe "N/A" language,
+                  { embedFieldName = language,
                     embedFieldValue = tshow count,
                     embedFieldInline = Nothing
                   }
