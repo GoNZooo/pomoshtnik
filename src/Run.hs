@@ -3,7 +3,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Run (run) where
+module Run
+  ( run,
+  )
+where
 
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
@@ -62,14 +65,12 @@ import qualified Yesod.Core as Yesod
 run :: RIO App ()
 run = do
   applicationState@App {appLogFunc, appDiscordEvents, appDiscordHandle} <- ask
-
   discordToken <-
     liftIO $
       Environment.getEnv "DISCORD_API_TOKEN" >>= \t ->
         pure $
           "Bot " <> Text.pack t
-
-  let runCommandHandler = do
+  let runCommandHandler =
         forever $ do
           maybeEvent <- atomically $ decodeCommand <$> readTQueue appDiscordEvents
           for_ maybeEvent (handleCommand >>> runRIO applicationState)
@@ -79,10 +80,10 @@ run = do
       runDiscordInputThread =
         liftIO $ Discord.runDiscord Discord.def {discordToken, discordOnStart, discordOnEvent}
   (discordResult, ()) <-
-    liftIO $
-      concurrently runDiscordInputThread $
-        concurrently_ runCommandHandler $
-          Warp.run 4000 =<< Yesod.toWaiApp (WebBase applicationState)
+    liftIO
+      $ concurrently runDiscordInputThread
+      $ concurrently_ runCommandHandler
+      $ Warp.run 4000 =<< Yesod.toWaiApp (WebBase applicationState)
   logErrorS "Discord" $ display discordResult
 
 decodeCommand :: Event -> Maybe IncomingCommand
@@ -177,8 +178,8 @@ handleCommand ::
 handleCommand IncomingCommand {user, command = GenerateToken} = do
   newToken <- addNewToken user
   discordLog $ "Added token '" <> tshow newToken <> "' for user with ID '" <> userName user <> "'"
-handleCommand IncomingCommand {channelId, user, command = Login suppliedToken} = do
-  whenM (authenticateUser user suppliedToken) $ do
+handleCommand IncomingCommand {channelId, user, command = Login suppliedToken} =
+  whenM (authenticateUser user suppliedToken) $
     replyTo channelId user (Just "You have been authenticated.") Nothing
 handleCommand IncomingCommand {channelId, user, command = AuthenticatedUsers} = do
   usersReference <- view authenticatedUsersL
@@ -204,7 +205,7 @@ handleCommand IncomingCommand {channelId, user, command = SearchMovie movieTitle
   movieResult <- TMDB.searchMovieM movieTitle
   case movieResult of
     Right movie -> do
-      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+      imageBaseUrl <- secureBaseUrl <$> view tmdbImageConfigurationDataL
       let embed = movieEmbed imageBaseUrl PosterW780 movie
       replyTo channelId user Nothing embed
     Left error' -> replyTo channelId user (Just $ fromString error') Nothing
@@ -227,7 +228,7 @@ handleCommand IncomingCommand {channelId, user, command = SearchShow showTitle} 
   movieResult <- TMDB.searchShowM showTitle
   case movieResult of
     Right movie -> do
-      ImageConfigurationData {secureBaseUrl = imageBaseUrl} <- view tmdbImageConfigurationDataL
+      imageBaseUrl <- secureBaseUrl <$> view tmdbImageConfigurationDataL
       let embed = showEmbed imageBaseUrl PosterW780 movie
       replyTo channelId user Nothing embed
     Left error' -> replyTo channelId user (Just $ fromString error') Nothing
@@ -264,7 +265,7 @@ handleCommand IncomingCommand {channelId, user, command = AuthenticateExternal u
   case authenticationResult of
     Just () -> replyTo channelId user (Just "Server responded successfully.") Nothing
     Nothing -> replyTo channelId user (Just "Server responded with error.") Nothing
-handleCommand IncomingCommand {channelId, user, command = GitHubCommand gitHubCommand} = do
+handleCommand IncomingCommand {channelId, user, command = GitHubCommand gitHubCommand} =
   handleGitHubCommand channelId user gitHubCommand
 handleCommand IncomingCommand {channelId, user, command = NoteCommand noteCommand} = do
   maybeUser <- Database.getOrCreateUserM $ Username $ constructUsername user
@@ -359,6 +360,7 @@ repositoriesEmbed username repositories = do
           & getLanguageCounts
           & Map.toList
           & List.sortBy (\a b -> compare (snd b) (snd a))
+          & List.take 10
           & map
             ( \(language, count) ->
                 EmbedField
@@ -382,7 +384,7 @@ repositoriesEmbed username repositories = do
     }
 
 gitHubUserEmbed :: GitHubUser -> CreateEmbed
-gitHubUserEmbed user = do
+gitHubUserEmbed user =
   Discord.def
     { createEmbedTitle = user ^. gitHubUserLogin,
       createEmbedDescription = fromMaybe "N/A" $ user ^. gitHubUserBio,
@@ -390,7 +392,7 @@ gitHubUserEmbed user = do
     }
 
 repositoryEmbed :: GitHubRepository -> CreateEmbed
-repositoryEmbed repository = do
+repositoryEmbed repository =
   Discord.def
     { createEmbedTitle = repository ^. gitHubRepositoryFullName,
       createEmbedDescription = fromMaybe "N/A" $ repository ^. gitHubRepositoryDescription,
@@ -486,36 +488,34 @@ personEmbed
         movieFields :: [KnownFor] -> [EmbedField]
         movieFields = fmap knownForToField
         knownForToField :: KnownFor -> EmbedField
-        knownForToField
-          (KnownForMovie KnownForMovieData {title, voteAverage, releaseDate, overview}) =
-            EmbedField
-              { embedFieldName =
-                  mconcat
-                    [ maybe "" identity releaseDate,
-                      ": ",
-                      maybe "" identity title,
-                      " (",
-                      tshow voteAverage,
-                      ")"
-                    ],
-                embedFieldValue = overview,
-                embedFieldInline = Nothing
-              }
-        knownForToField
-          (KnownForShow KnownForShowData {firstAirDate, overview, voteAverage, name = showName}) =
-            EmbedField
-              { embedFieldName =
-                  mconcat
-                    [ maybe "" identity firstAirDate,
-                      ": ",
-                      maybe "" identity showName,
-                      " (",
-                      tshow voteAverage,
-                      ")"
-                    ],
-                embedFieldValue = overview,
-                embedFieldInline = Nothing
-              }
+        knownForToField (KnownForMovie KnownForMovieData {title, voteAverage, releaseDate, overview}) =
+          EmbedField
+            { embedFieldName =
+                mconcat
+                  [ maybe "" identity releaseDate,
+                    ": ",
+                    maybe "" identity title,
+                    " (",
+                    tshow voteAverage,
+                    ")"
+                  ],
+              embedFieldValue = overview,
+              embedFieldInline = Nothing
+            }
+        knownForToField (KnownForShow KnownForShowData {firstAirDate, overview, voteAverage, name = showName}) =
+          EmbedField
+            { embedFieldName =
+                mconcat
+                  [ maybe "" identity firstAirDate,
+                    ": ",
+                    maybe "" identity showName,
+                    " (",
+                    tshow voteAverage,
+                    ")"
+                  ],
+              embedFieldValue = overview,
+              embedFieldInline = Nothing
+            }
         createEmbedImage =
           fmap (profileUrl imageBaseUrl profileSize >>> CreateEmbedImageUrl) profilePath
      in pure $
