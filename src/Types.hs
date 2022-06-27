@@ -7,7 +7,6 @@ module Types where
 import qualified Data.Aeson as JSON
 import qualified Data.List as List
 import Data.Pool (Pool)
-import Data.UUID (UUID)
 import qualified Database.Persist as Persist
 import Database.Persist.Sql (SqlBackend)
 import qualified Database.Persist.Sql as Sql

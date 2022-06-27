@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-18.14
+resolver: lts-18.28
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -35,10 +35,10 @@ extra-deps:
 - emoji-0.1.0.2
 - discord-haskell-1.8.3
 - github: quanterall/qtility
-  commit: f551c230d649746efdffabb0170fa8c53f7c5d98
+  commit: feebd3658c48ca15caea9007f2a545019a246521
   subdirs:
   - qtility
-  # nix-sha256: sha256-ijhiIRKY5/DU6M7JL9tgxrQcJnOSHGEpWIty6IbxrF4=
+  # nix-sha256: sha256-GKn9DqlG5TdJVoUXRaYxXN8UPxgSq/coswpc4O049Eg=
 
 allow-different-user: true
 

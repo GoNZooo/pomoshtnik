@@ -8,7 +8,6 @@ module Run
   )
 where
 
-import Data.UUID (UUID)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
 import Database.Persist (Entity (..))
@@ -25,7 +24,6 @@ import Discord.Types
     User (..),
   )
 import Import
-import qualified Network.Wai.Handler.Warp as Warp
 import qualified Pomoshtnik.Database as Database
 import Pomoshtnik.Discord
   ( argumentsAsText,
@@ -54,13 +52,11 @@ import Pomoshtnik.TMDB.Types
     ShowCandidate (..),
     TVShow (..),
   )
-import Pomoshtnik.Web (WebBase (..))
 import qualified RIO.List as List
 import qualified RIO.Map as Map
 import qualified RIO.Set as Set
 import qualified RIO.Text as Text
 import qualified System.Environment as Environment
-import qualified Yesod.Core as Yesod
 
 run :: RIO App ()
 run = do
@@ -80,10 +76,8 @@ run = do
       runDiscordInputThread =
         liftIO $ Discord.runDiscord Discord.def {discordToken, discordOnStart, discordOnEvent}
   (discordResult, ()) <-
-    liftIO
-      $ concurrently runDiscordInputThread
-      $ concurrently_ runCommandHandler
-      $ Warp.run 4000 =<< Yesod.toWaiApp (WebBase applicationState)
+    liftIO $
+      concurrently runDiscordInputThread runCommandHandler
   logErrorS "Discord" $ display discordResult
 
 decodeCommand :: Event -> Maybe IncomingCommand

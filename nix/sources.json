@@ -5,10 +5,10 @@
         "homepage": "https://input-output-hk.github.io/haskell.nix",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "668c075003d3d26b010b3abad9fedfe10c12d4a8",
-        "sha256": "1mqnxh5xhjd883dpnizizf0xzyajfan32d7nbbjb30p47k6jpmrm",
+        "rev": "ed14313f8c2054e116dd1377e37eb10da64587a0",
+        "sha256": "05sj4a6w716jjlngs9wibflsq9nanbzv5h6sdz4qq50j9bhcivva",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/668c075003d3d26b010b3abad9fedfe10c12d4a8.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/ed14313f8c2054e116dd1377e37eb10da64587a0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
@@ -17,22 +17,10 @@
         "homepage": "https://github.com/nmattia/niv",
         "owner": "nmattia",
         "repo": "niv",
-        "rev": "9cb7ef336bb71fd1ca84fc7f2dff15ef4b033f2a",
-        "sha256": "1ajyqr8zka1zlb25jx1v4xys3zqmdy3prbm1vxlid6ah27a8qnzh",
+        "rev": "5830a4dd348d77e39a0f3c4c762ff2663b602d4c",
+        "sha256": "1d3lsrqvci4qz2hwjrcnd8h5vfkg8aypq3sjd4g3izbc8frwz5sm",
         "type": "tarball",
-        "url": "https://github.com/nmattia/niv/archive/9cb7ef336bb71fd1ca84fc7f2dff15ef4b033f2a.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "nixpkgs": {
-        "branch": "release-20.03",
-        "description": "Nix Packages collection",
-        "homepage": "",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "eb73405ecceb1dc505b7cbbd234f8f94165e2696",
-        "sha256": "06k21wbyhhvq2f1xczszh3c2934p0m02by3l2ixvd6nkwrqklax7",
-        "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/eb73405ecceb1dc505b7cbbd234f8f94165e2696.tar.gz",
+        "url": "https://github.com/nmattia/niv/archive/5830a4dd348d77e39a0f3c4c762ff2663b602d4c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

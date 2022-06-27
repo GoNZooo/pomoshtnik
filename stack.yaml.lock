@@ -19,21 +19,21 @@ packages:
   original:
     hackage: discord-haskell-1.8.3
 - completed:
-    size: 40251
+    size: 59907
     subdir: qtility
-    url: https://github.com/quanterall/qtility/archive/f551c230d649746efdffabb0170fa8c53f7c5d98.tar.gz
+    url: https://github.com/quanterall/qtility/archive/feebd3658c48ca15caea9007f2a545019a246521.tar.gz
     name: qtility
-    version: 0.0.0
-    sha256: eee1b47a6ee8af656473c175da7a3bda67111068b1b40ad8cfac2360d2a72611
+    version: 1.3.0
+    sha256: 62dc0e6268b21ee6acad450b0d89e747fed123a97bede7d809370e4c7e0f74ea
     pantry-tree:
-      size: 1296
-      sha256: 37d615d7a35e47d5c5930a4cef8592fcc859453a228812f45fd05fef5f4c5a5e
+      size: 1657
+      sha256: 3b82085b41c38d5895b0ed6561eb2e35e1aa308483def52d04825ec25377f6be
   original:
     subdir: qtility
-    url: https://github.com/quanterall/qtility/archive/f551c230d649746efdffabb0170fa8c53f7c5d98.tar.gz
+    url: https://github.com/quanterall/qtility/archive/feebd3658c48ca15caea9007f2a545019a246521.tar.gz
 snapshots:
 - completed:
-    size: 586069
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/14.yaml
-    sha256: 87842ecbaa8ca9cee59a7e6be52369dbed82ed075cb4e0d152614a627e8fd488
-  original: lts-18.14
+    size: 590100
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
+    sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
+  original: lts-18.28
